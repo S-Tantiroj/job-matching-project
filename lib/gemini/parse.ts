@@ -8,7 +8,7 @@ export async function parseResume(text: string): Promise<CandidateInput> {
 ${text}`
 
   const res = await getGemini().models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-flash-latest',
     contents: prompt,
   })
   const parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())
