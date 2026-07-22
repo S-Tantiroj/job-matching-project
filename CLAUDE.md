@@ -80,16 +80,23 @@ tables `education`, `experience`, `skills`/`candidate_skills`,
 - [x] Task 2 — schema, pgvector, `match_candidates`, RLS
 - [x] Task 3 — Gemini client + embedding
 - [x] Task 4 — normalize + upsert (dedup)
-- [ ] Task 5 — CSV parse + column mapping
-- [ ] Task 6 — Gemini parse (resume) + analyze (score)
-- [ ] Task 7 — analyze API + cache
-- [ ] Task 8 — RAG + hybrid search + score
+- [x] Task 5 — CSV parse + column mapping
+- [x] Task 6 — Gemini parse (resume) + analyze (score)
+- [x] Task 7 — analyze API + cache
+- [x] Task 8 — RAG + hybrid search + score (search score = vector similarity; LLM deep-score on candidate page only, to respect free-tier quota)
 - [ ] Task 9 — ingest API (csv + upload)
 - [ ] Task 10 — auth (login/signup), role, route guard
 - [ ] Task 11 — UI: dashboard, candidate+timeline, search, shortlist
-- [ ] Task 12 — synthetic Thai seed data
+- [x] Task 12 — synthetic Thai seed data (`scripts/seed-synthetic.ts`)
 - [ ] Task 13 — user settings (optional)
 - [ ] Task 14 — admin user management + deploy
+
+## Gemini free-tier note
+
+Free tier = 5 generate requests/min per model. Do NOT call the generation model
+once per search result. Search ranks by vector similarity; the LLM (`analyze`)
+runs only on-demand per candidate. For heavy demo/production, enable billing or
+add a queue/rate-limit.
 
 ## Known environment note
 
