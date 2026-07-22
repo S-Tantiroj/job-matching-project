@@ -33,6 +33,10 @@ Full spec and plan live in `docs/superpowers/`:
 - **Generation:** model `gemini-flash-latest` for parse / analyze / generate
   (the `gemini-2.5-flash` in import_jobs.py is deprecated for new API keys; the
   `-latest` alias tracks the current flash model and avoids repeat breakage).
+- **Data language:** candidate data stored in the tables is **English** (romanized
+  Thai names, English institutions/skills/etc.) for uniformity with future scraped
+  LinkedIn data. Generators enforce this: `generate.ts` and `parse.ts` output
+  English. AI **reasoning/advice** (the `analyze` output) stays **Thai**.
 - **Match score:** integer 0–100 everywhere (search results and analysis use the same scale).
 - **All ingestion paths land in one schema** (`candidates` + child tables) via
   `lib/ingest/upsert.ts`. `candidates.source` = `synthetic` | `csv` | `upload` | `scraper`.
