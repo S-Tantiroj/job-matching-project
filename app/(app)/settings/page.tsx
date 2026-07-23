@@ -31,6 +31,11 @@ export default function SettingsPage() {
     setMsg(error ? error.message : 'บันทึกแล้ว')
   }
 
+  const logout = async () => {
+    await db.auth.signOut()
+    window.location.href = '/login'
+  }
+
   return (
     <main style={{ maxWidth: 520 }}>
       <h1>ตั้งค่า</h1>
@@ -54,6 +59,25 @@ export default function SettingsPage() {
         </button>
       </div>
       {msg && <p style={{ color: '#16a34a' }}>{msg}</p>}
+
+      <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #eee' }} />
+      <h2 style={{ fontSize: 16 }}>บัญชี</h2>
+      <p style={{ margin: '0 0 8px', fontSize: 13, color: '#777' }}>
+        ออกจากระบบบัญชีนี้บนอุปกรณ์นี้
+      </p>
+      <button
+        onClick={logout}
+        style={{
+          background: '#dc2626',
+          color: '#fff',
+          border: 'none',
+          padding: '8px 16px',
+          borderRadius: 6,
+          cursor: 'pointer',
+        }}
+      >
+        ออกจากระบบ
+      </button>
     </main>
   )
 }
