@@ -6,6 +6,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <nav style={{ display: 'flex', gap: 16, paddingBottom: 16, borderBottom: '1px solid #eee' }}>
         <Link href="/dashboard">Dashboard</Link>
         <Link href="/search">ค้นหา</Link>
+        <Link href="/jobs">งาน</Link>
         <Link href="/shortlists">Shortlist</Link>
         <Link href="/admin/users">Admin</Link>
         <Link href="/settings" style={{ marginLeft: 'auto' }}>
