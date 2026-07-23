@@ -38,6 +38,12 @@ See `docs/superpowers/` for the full spec and implementation plan, and
    npx tsx scripts/seed-synthetic.ts 30
    ```
 
+   Seed demo jobs (for job → candidate matching):
+
+   ```
+   npx tsx scripts/seed-jobs.ts
+   ```
+
 6. Run the dev server:
 
    ```

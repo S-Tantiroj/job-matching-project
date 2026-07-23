@@ -95,6 +95,15 @@ tables `education`, `experience`, `skills`/`candidate_skills`,
 - [x] Task 13 — user settings (optional) — needs migration 003 (profile update policy)
 - [x] Task 14 — admin user management + deploy (README)
 
+### Phase 2 — Job matching (job → candidates)
+Plan: `docs/superpowers/plans/2026-07-23-job-matching.md`
+- [x] Jobs RLS + read policy (migration 005)
+- [x] Job normalize + upsert (embed, dedup on source+external_id)
+- [x] Create-job API + jobs UI (list/create/detail)
+- [x] Vector ranking (matchCandidatesForJob, reuses match_candidates)
+- [x] Shared scoreCandidateAgainst + job deep-score API (reuses analyses cache)
+- [x] Synthetic job seed (scripts/seed-jobs.ts)
+
 ## Gemini free-tier note
 
 Free tier = 5 generate requests/min per model. Do NOT call the generation model
