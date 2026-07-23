@@ -1,8 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getBrowserClient } from '@/lib/supabase/client'
 import ScoreBadge from './ScoreBadge'
 
 // Deep per-candidate AI analysis (calls /api/analyze). Reasoning is in Thai.
+// Prefills the requirement from the user's saved default (Settings page).
 export default function AnalyzePanel({ candidateId }: { candidateId: string }) {
   const [requirement, setRequirement] = useState('')
   const [loading, setLoading] = useState(false)
@@ -10,6 +12,18 @@ export default function AnalyzePanel({ candidateId }: { candidateId: string }) {
     null
   )
   const [error, setError] = useState('')
+
+  // Prefill from the user's saved default requirement (Settings).
+  useEffect(() => {
+    ;(async () => {
+      const db = getBrowserClient()
+      const { data: { user } } = await db.auth.getUser()
+      if (!user) return
+      const { data } = await db.from('profiles').select('settings').eq('id', user.id).maybeSingle()
+      const def = (data as any)?.settings?.defaultRequirement
+      if (def) setRequirement(def)
+    })()
+  }, [])
 
   const run = async () => {
     setLoading(true)
