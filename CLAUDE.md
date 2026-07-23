@@ -88,7 +88,7 @@ tables `education`, `experience`, `skills`/`candidate_skills`,
 - [x] Task 6 — Gemini parse (resume) + analyze (score)
 - [x] Task 7 — analyze API + cache
 - [x] Task 8 — RAG + hybrid search + score (search score = vector similarity; LLM deep-score on candidate page only, to respect free-tier quota)
-- [ ] Task 9 — ingest API (csv + upload)
+- [x] Task 9 — ingest API (csv + upload)
 - [x] Task 10 — auth (login/signup), role, route guard (profile auto-created by trigger, migration 002)
 - [ ] Task 11 — UI: dashboard, candidate+timeline, search, shortlist
 - [x] Task 12 — synthetic Thai seed data (`scripts/seed-synthetic.ts`)
