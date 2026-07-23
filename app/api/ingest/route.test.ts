@@ -11,6 +11,9 @@ vi.mock('@/lib/ingest/upsert', () => ({ upsertCandidate: (...a: any[]) => upsert
 vi.mock('@/lib/gemini/parse', () => ({
   parseResume: async () => ({ full_name: 'R', source: 'upload' }),
 }))
+vi.mock('@/lib/auth/session', () => ({
+  getSession: async () => ({ userId: 'u1', role: 'member' }),
+}))
 
 import { POST } from './route'
 

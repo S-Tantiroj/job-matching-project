@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseCsv } from '@/lib/ingest/csv'
 import { parseResume } from '@/lib/gemini/parse'
 import { upsertCandidate } from '@/lib/ingest/upsert'
+import { getSession } from '@/lib/auth/session'
 import type { CandidateInput } from '@/lib/ingest/normalize'
 
 // POST /api/ingest
-//   { type: 'csv',    csv: string, mapping: Record<string,string>, userId?: string }
-//   { type: 'upload', text: string, userId?: string }
-// Returns { imported, updated }. NOTE: userId is temporary — Task 10 replaces it
-// with the authenticated session.
+//   { type: 'csv',    csv: string, mapping: Record<string,string> }
+//   { type: 'upload', text: string }
+// Returns { imported, updated, errors }. Requires an authenticated session.
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const userId: string | null = body.userId ?? null
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const userId = session.userId
 
+  const body = await req.json()
   let inputs: CandidateInput[] = []
   if (body.type === 'csv') {
     inputs = parseCsv(body.csv, body.mapping)
