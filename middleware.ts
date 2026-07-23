@@ -37,6 +37,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/search/:path*',
+    '/jobs/:path*',
     '/candidates/:path*',
     '/shortlists/:path*',
     '/admin/:path*',
