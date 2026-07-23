@@ -11,6 +11,7 @@ export default function SearchPage() {
   const [ran, setRan] = useState(false)
 
   const run = async () => {
+    if (!q.trim() || loading) return
     setLoading(true)
     setRan(true)
     const r = await fetch('/api/search', {
@@ -18,7 +19,8 @@ export default function SearchPage() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ query: q, filters: { foreignEduOnly: foreign } }),
     })
-    setRes(await r.json())
+    const json = await r.json()
+    setRes(Array.isArray(json) ? json : [])
     setLoading(false)
   }
 
