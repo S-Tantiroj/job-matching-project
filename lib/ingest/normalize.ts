@@ -38,3 +38,20 @@ export function buildEmbedText(i: CandidateInput): string {
     .filter(Boolean)
     .join('\n')
 }
+
+// Total years of experience = sum of each role's duration (open-ended roles run
+// to now). Overlapping roles may slightly overcount — acceptable for v1.
+// Precomputed and stored on candidates.years_experience for fast filtering.
+export function computeYearsExperience(
+  experience: { start_date?: string; end_date?: string }[]
+): number {
+  let totalMs = 0
+  for (const e of experience ?? []) {
+    if (!e.start_date) continue
+    const start = new Date(e.start_date).getTime()
+    const end = e.end_date ? new Date(e.end_date).getTime() : Date.now()
+    if (isNaN(start) || isNaN(end) || end < start) continue
+    totalMs += end - start
+  }
+  return Math.round(totalMs / (365.25 * 24 * 60 * 60 * 1000))
+}

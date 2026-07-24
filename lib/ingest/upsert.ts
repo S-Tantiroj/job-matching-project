@@ -1,6 +1,6 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { embedText } from '@/lib/gemini/embed'
-import { buildEmbedText, type CandidateInput } from './normalize'
+import { buildEmbedText, computeYearsExperience, type CandidateInput } from './normalize'
 
 // Writes a candidate (+ education, experience, skills) to the DB.
 // Dedup: if a candidate with the same full_name (and matching first-education
@@ -29,6 +29,7 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
     location: input.location ?? null,
     summary: input.summary ?? null,
     source: input.source,
+    years_experience: computeYearsExperience(input.experience ?? []),
     raw_data: input.raw ?? null,
     embedding,
     created_by: createdBy,
