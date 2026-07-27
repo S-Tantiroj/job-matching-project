@@ -39,6 +39,9 @@ Request: ${nl}`
   const res = await getGemini().models.generateContent({
     model: 'gemini-flash-latest',
     contents: prompt,
+    // Force strict JSON output (no markdown fences / prose) so complex queries
+    // parse reliably instead of falling back to a plain semantic search.
+    config: { responseMimeType: 'application/json' },
   })
   // The LLM can occasionally return malformed or truncated JSON (long/complex
   // queries). Never throw — fall back to a plain semantic search on the raw text.
