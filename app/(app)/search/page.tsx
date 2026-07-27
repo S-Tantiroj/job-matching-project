@@ -2,59 +2,97 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import ScoreBadge from '@/components/ScoreBadge'
+import FilterChips from '@/components/FilterChips'
+import type { ChipFilters } from '@/lib/search/extractFilters'
 
 export default function SearchPage() {
-  const [q, setQ] = useState('')
-  const [foreign, setForeign] = useState(true)
-  const [loading, setLoading] = useState(false)
+  const [nl, setNl] = useState('')
+  const [semanticQuery, setSemanticQuery] = useState('')
+  const [filters, setFilters] = useState<ChipFilters>({})
   const [res, setRes] = useState<any[]>([])
+  const [parsing, setParsing] = useState(false)
+  const [searching, setSearching] = useState(false)
   const [ran, setRan] = useState(false)
 
-  const run = async () => {
-    if (!q.trim() || loading) return
-    setLoading(true)
+  // Run search from a given semanticQuery + filters (no LLM).
+  const runSearch = async (sq: string, f: ChipFilters) => {
+    if (!sq.trim()) return
+    setSearching(true)
     setRan(true)
     const r = await fetch('/api/search', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: q, filters: { foreignEduOnly: foreign } }),
+      body: JSON.stringify({ semanticQuery: sq, filters: f }),
     })
     const json = await r.json()
     setRes(Array.isArray(json) ? json : [])
-    setLoading(false)
+    setSearching(false)
+  }
+
+  // Parse NL -> chips (LLM), then search.
+  const parseAndSearch = async () => {
+    if (!nl.trim() || parsing) return
+    setParsing(true)
+    const r = await fetch('/api/search/parse', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query: nl }),
+    })
+    const intent = await r.json()
+    setParsing(false)
+    const sq = intent.semanticQuery ?? nl
+    const f = intent.filters ?? {}
+    setSemanticQuery(sq)
+    setFilters(f)
+    await runSearch(sq, f)
+  }
+
+  // Chip edits: update state and re-run immediately (no LLM).
+  const onFiltersChange = (f: ChipFilters) => {
+    setFilters(f)
+    runSearch(semanticQuery, f)
   }
 
   return (
     <main>
       <h1>ค้นหาผู้สมัคร</h1>
+
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <input
           style={{ flex: 1 }}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && run()}
-          placeholder="ค้นหาด้วยภาษาธรรมชาติ เช่น data scientist skilled in Python who studied abroad"
+          value={nl}
+          onChange={(e) => setNl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && parseAndSearch()}
+          placeholder="พิมพ์ภาษาธรรมชาติ เช่น data scientist สาย Python ที่จบจากอเมริกา 3 ปีขึ้นไป"
         />
-        <button onClick={run} disabled={loading || !q}>
-          {loading ? 'กำลังค้นหา…' : 'ค้นหา'}
+        <button onClick={parseAndSearch} disabled={parsing || !nl}>
+          {parsing ? 'กำลังอ่าน…' : 'ค้นหา'}
         </button>
       </div>
-      <label style={{ fontSize: 14 }}>
-        <input type="checkbox" checked={foreign} onChange={(e) => setForeign(e.target.checked)} />{' '}
-        เฉพาะคนที่จบจากต่างประเทศ
-      </label>
+
+      {semanticQuery && (
+        <>
+          <div style={{ fontSize: 13, color: '#777', marginBottom: 4 }}>คำอธิบายที่ค้นหา (แก้ได้)</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              style={{ flex: 1 }}
+              value={semanticQuery}
+              onChange={(e) => setSemanticQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && runSearch(semanticQuery, filters)}
+            />
+            <button onClick={() => runSearch(semanticQuery, filters)} disabled={searching}>
+              ค้นหาใหม่
+            </button>
+          </div>
+          <FilterChips filters={filters} onChange={onFiltersChange} />
+        </>
+      )}
 
       <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>
         {res.map((c) => (
           <li
             key={c.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 0',
-              borderBottom: '1px solid #f2f2f2',
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid #f2f2f2' }}
           >
             <ScoreBadge score={c.score} />
             <Link href={`/candidates/${c.id}`} style={{ fontWeight: 600 }}>
@@ -64,7 +102,7 @@ export default function SearchPage() {
           </li>
         ))}
       </ul>
-      {ran && !loading && res.length === 0 && <p style={{ color: '#888' }}>ไม่พบผู้สมัคร</p>}
+      {ran && !searching && res.length === 0 && <p style={{ color: '#888' }}>ไม่พบผู้สมัคร</p>}
     </main>
   )
 }

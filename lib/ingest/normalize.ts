@@ -55,3 +55,17 @@ export function computeYearsExperience(
   }
   return Math.round(totalMs / (365.25 * 24 * 60 * 60 * 1000))
 }
+
+// Coerce loose date strings (year-only "2019", year-month "2019-05") into ISO
+// YYYY-MM-DD so they insert cleanly into Postgres `date` columns. Returns null
+// for empty or unparseable input. Prevents a whole experience-insert batch from
+// failing when the LLM emits a non-ISO date.
+export function toIsoDate(input?: string | null): string | null {
+  if (!input) return null
+  const s = String(input).trim()
+  if (/^\d{4}$/.test(s)) return `${s}-01-01`
+  if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10)
+}

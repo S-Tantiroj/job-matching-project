@@ -1,6 +1,6 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { embedText } from '@/lib/gemini/embed'
-import { buildEmbedText, computeYearsExperience, type CandidateInput } from './normalize'
+import { buildEmbedText, computeYearsExperience, toIsoDate, type CandidateInput } from './normalize'
 
 // Writes a candidate (+ education, experience, skills) to the DB.
 // Dedup: if a candidate with the same full_name (and matching first-education
@@ -57,9 +57,14 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
       .insert(input.education.map((e) => ({ ...e, candidate_id: candidateId })))
   }
   if (input.experience?.length) {
-    await db
-      .from('experience')
-      .insert(input.experience.map((e) => ({ ...e, candidate_id: candidateId })))
+    await db.from('experience').insert(
+      input.experience.map((e) => ({
+        ...e,
+        start_date: toIsoDate(e.start_date),
+        end_date: toIsoDate(e.end_date),
+        candidate_id: candidateId,
+      }))
+    )
   }
   for (const name of input.skills ?? []) {
     const { data: sk } = await db
