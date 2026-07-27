@@ -71,6 +71,8 @@ export default function SearchPage() {
         </button>
       </div>
 
+      <CoverageStrip semanticQuery={semanticQuery} filters={filters} />
+
       {semanticQuery && (
         <>
           <div style={{ fontSize: 13, color: '#777', marginBottom: 4 }}>คำอธิบายที่ค้นหา (แก้ได้)</div>
@@ -85,7 +87,6 @@ export default function SearchPage() {
               ค้นหาใหม่
             </button>
           </div>
-          <CoverageStrip semanticQuery={semanticQuery} filters={filters} />
           <FilterChips filters={filters} onChange={onFiltersChange} />
         </>
       )}
