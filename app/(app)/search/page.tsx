@@ -34,12 +34,17 @@ export default function SearchPage() {
   const parseAndSearch = async () => {
     if (!nl.trim() || parsing) return
     setParsing(true)
-    const r = await fetch('/api/search/parse', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: nl }),
-    })
-    const intent = await r.json()
+    let intent: any = {}
+    try {
+      const r = await fetch('/api/search/parse', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: nl }),
+      })
+      if (r.ok) intent = await r.json()
+    } catch {
+      intent = {}
+    }
     setParsing(false)
     const sq = intent.semanticQuery ?? nl
     const f = intent.filters ?? {}

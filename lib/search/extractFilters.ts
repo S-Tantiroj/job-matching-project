@@ -38,7 +38,14 @@ Request: ${nl}`
     model: 'gemini-flash-latest',
     contents: prompt,
   })
-  const parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())
+  // The LLM can occasionally return malformed or truncated JSON (long/complex
+  // queries). Never throw — fall back to a plain semantic search on the raw text.
+  let parsed: any = {}
+  try {
+    parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())
+  } catch {
+    parsed = {}
+  }
   return {
     semanticQuery: String(parsed.semanticQuery ?? nl),
     filters: (parsed.filters ?? {}) as ChipFilters,

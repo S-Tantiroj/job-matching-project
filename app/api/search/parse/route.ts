@@ -11,5 +11,11 @@ export async function POST(req: NextRequest) {
   const { query } = await req.json()
   if (!query) return NextResponse.json({ error: 'query is required' }, { status: 400 })
 
-  return NextResponse.json(await extractSearchIntent(query))
+  // Always return valid JSON. If the LLM call fails (e.g. rate limit), fall back
+  // to a plain semantic search on the raw query so the UI never crashes.
+  try {
+    return NextResponse.json(await extractSearchIntent(query))
+  } catch {
+    return NextResponse.json({ semanticQuery: query, filters: {} })
+  }
 }
