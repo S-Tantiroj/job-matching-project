@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import ScoreBadge from '@/components/ScoreBadge'
 import FilterChips from '@/components/FilterChips'
+import CoverageStrip from '@/components/CoverageStrip'
 import type { ChipFilters } from '@/lib/search/extractFilters'
 
 export default function SearchPage() {
@@ -63,7 +64,7 @@ export default function SearchPage() {
           value={nl}
           onChange={(e) => setNl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && parseAndSearch()}
-          placeholder="พิมพ์ภาษาธรรมชาติ เช่น data scientist สาย Python ที่จบจากอเมริกา 3 ปีขึ้นไป"
+          placeholder="พิมพ์คำค้นหาทั่วไป เช่น data scientist สาย Python ที่จบจากอเมริกา 3 ปีขึ้นไป"
         />
         <button onClick={parseAndSearch} disabled={parsing || !nl}>
           {parsing ? 'กำลังอ่าน…' : 'ค้นหา'}
@@ -84,6 +85,7 @@ export default function SearchPage() {
               ค้นหาใหม่
             </button>
           </div>
+          <CoverageStrip semanticQuery={semanticQuery} filters={filters} />
           <FilterChips filters={filters} onChange={onFiltersChange} />
         </>
       )}
