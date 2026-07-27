@@ -30,6 +30,8 @@ Schema:
 Rules:
 - Omit any filter key not mentioned. Omit "filters" entirely if none apply.
 - Put the job title / role in semanticQuery, NOT in filters.
+- Translate any Thai in the query to English for ALL output values.
+- An education level counts as fieldOrDegree. Map Thai levels: ปริญญาตรี = "Bachelor", ปริญญาโท = "Master", ปริญญาเอก = "PhD". A field of study (e.g. "Computer Science") also goes in fieldOrDegree.
 - Output English values.
 
 Request: ${nl}`
