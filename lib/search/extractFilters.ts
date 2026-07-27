@@ -47,7 +47,11 @@ Request: ${nl}`
   // queries). Never throw — fall back to a plain semantic search on the raw text.
   let parsed: any = {}
   try {
-    parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())
+    const raw = (res.text ?? '').replace(/```json|```/g, '').trim()
+    // Extract the JSON object even if the model wraps it in prose.
+    const start = raw.indexOf('{')
+    const end = raw.lastIndexOf('}')
+    parsed = JSON.parse(start >= 0 && end > start ? raw.slice(start, end + 1) : raw)
   } catch {
     parsed = {}
   }
