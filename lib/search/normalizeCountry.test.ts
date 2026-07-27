@@ -1,13 +1,15 @@
 import { normalizeCountry } from './normalizeCountry'
 
-test('canonicalizes common country aliases', () => {
-  expect(normalizeCountry('United States')).toBe('USA')
-  expect(normalizeCountry('united states of america')).toBe('USA')
-  expect(normalizeCountry('U.K.')).toBe('UK')
-  expect(normalizeCountry('England')).toBe('UK')
+test('canonicalizes aliases and short forms to the stored full name', () => {
+  expect(normalizeCountry('USA')).toBe('United States')
+  expect(normalizeCountry('us')).toBe('United States')
+  expect(normalizeCountry('America')).toBe('United States')
+  expect(normalizeCountry('U.K.')).toBe('United Kingdom')
+  expect(normalizeCountry('England')).toBe('United Kingdom')
 })
 
-test('passes through unmapped values trimmed', () => {
+test('passes through full names and unmapped values trimmed', () => {
+  expect(normalizeCountry('United States')).toBe('United States')
+  expect(normalizeCountry('United Kingdom')).toBe('United Kingdom')
   expect(normalizeCountry('  Japan ')).toBe('Japan')
-  expect(normalizeCountry('USA')).toBe('USA')
 })

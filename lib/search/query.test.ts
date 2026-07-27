@@ -26,11 +26,11 @@ test('maps chip filters to RPC params and normalizes country values', async () =
   candRows = [ { id: 'c1', full_name: 'A', headline: 'X' }, { id: 'c2', full_name: 'B', headline: 'Y' } ]
   const r = await searchCandidates('data scientist', {
     skills: ['Python'],
-    educationAbroad: { countries: ['United States'] },
+    educationAbroad: { countries: ['USA'] },
     minYears: 3,
   })
   expect(rpcArgs.p_skills).toEqual(['Python'])
-  expect(rpcArgs.p_countries).toEqual(['USA'])
+  expect(rpcArgs.p_countries).toEqual(['United States'])
   expect(rpcArgs.p_min_years).toBe(3)
   expect(rpcArgs.p_any_foreign).toBe(false)
   expect(r.map((x) => x.id)).toEqual(['c1', 'c2'])

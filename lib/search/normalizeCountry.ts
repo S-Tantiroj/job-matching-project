@@ -1,20 +1,21 @@
-// Canonicalize country names so the education-abroad chip is robust to the many
-// ways a country is written. Unmapped values pass through (trimmed). v1 covers
-// the common English aliases; extend as needed.
+// Canonicalize country names so the education-abroad chip matches stored
+// education.country values. The stored/synthetic data uses full English country
+// names ("United States", "United Kingdom"), so short forms and aliases are
+// mapped to that full form; full names and unmapped values pass through
+// (trimmed). Applied to the chip's country values before the RPC filters on
+// exact equality. v1 covers the common aliases; extend as needed.
 const MAP: Record<string, string> = {
-  'united states': 'USA',
-  'united states of america': 'USA',
-  'us': 'USA',
-  'u.s.': 'USA',
-  'u.s.a.': 'USA',
-  'usa': 'USA',
-  'america': 'USA',
-  'united kingdom': 'UK',
-  'great britain': 'UK',
-  'britain': 'UK',
-  'u.k.': 'UK',
-  'uk': 'UK',
-  'england': 'UK',
+  usa: 'United States',
+  us: 'United States',
+  'u.s.': 'United States',
+  'u.s.a.': 'United States',
+  america: 'United States',
+  'united states of america': 'United States',
+  uk: 'United Kingdom',
+  'u.k.': 'United Kingdom',
+  'great britain': 'United Kingdom',
+  britain: 'United Kingdom',
+  england: 'United Kingdom',
 }
 
 export function normalizeCountry(input: string): string {
