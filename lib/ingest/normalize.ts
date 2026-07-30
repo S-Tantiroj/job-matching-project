@@ -4,6 +4,9 @@ export type CandidateInput = {
   location?: string
   summary?: string
   source: 'synthetic' | 'csv' | 'upload' | 'scraper'
+  linkedin_url?: string
+  professional_email?: string
+  refreshed_at?: string
   education?: {
     institution?: string
     country?: string
