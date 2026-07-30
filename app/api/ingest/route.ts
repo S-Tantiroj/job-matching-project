@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseCsv } from '@/lib/ingest/csv'
+import { parseLinkedInCsv } from '@/lib/ingest/linkedin'
 import { parseResume } from '@/lib/gemini/parse'
 import { upsertCandidate } from '@/lib/ingest/upsert'
 import { getSession } from '@/lib/auth/session'
 import type { CandidateInput } from '@/lib/ingest/normalize'
 
 // POST /api/ingest
-//   { type: 'csv',    csv: string, mapping: Record<string,string> }
-//   { type: 'upload', text: string }
+//   { type: 'csv',      csv: string, mapping: Record<string,string> }
+//   { type: 'linkedin', csv: string }
+//   { type: 'upload',   text: string }
 // Returns { imported, updated, errors }. Requires an authenticated session.
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -18,10 +20,12 @@ export async function POST(req: NextRequest) {
   let inputs: CandidateInput[] = []
   if (body.type === 'csv') {
     inputs = parseCsv(body.csv, body.mapping)
+  } else if (body.type === 'linkedin') {
+    inputs = parseLinkedInCsv(body.csv)
   } else if (body.type === 'upload') {
     inputs = [await parseResume(body.text)]
   } else {
-    return NextResponse.json({ error: 'type must be "csv" or "upload"' }, { status: 400 })
+    return NextResponse.json({ error: 'type must be "csv", "linkedin", or "upload"' }, { status: 400 })
   }
 
   let imported = 0

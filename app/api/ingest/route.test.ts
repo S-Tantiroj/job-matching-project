@@ -6,6 +6,12 @@ vi.mock('@/lib/ingest/csv', () => ({
     { full_name: 'B', source: 'csv' },
   ],
 }))
+vi.mock('@/lib/ingest/linkedin', () => ({
+  parseLinkedInCsv: () => [
+    { full_name: 'L1', source: 'scraper' },
+    { full_name: 'L2', source: 'scraper' },
+  ],
+}))
 const upsertMock = vi.fn(async () => ({ id: 'x', updated: false }))
 vi.mock('@/lib/ingest/upsert', () => ({ upsertCandidate: (...a: any[]) => upsertMock(...a) }))
 vi.mock('@/lib/gemini/parse', () => ({
@@ -26,6 +32,12 @@ test('csv ingest imports each parsed row', async () => {
   const json = await res.json()
   expect(json.imported).toBe(2)
   expect(json.updated).toBe(0)
+})
+
+test('linkedin ingest imports each parsed row', async () => {
+  const res = await post({ type: 'linkedin', csv: 'a' })
+  const json = await res.json()
+  expect(json.imported).toBe(2)
 })
 
 test('upload ingest parses resume then upserts once', async () => {
