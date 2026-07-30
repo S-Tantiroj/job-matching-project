@@ -3,25 +3,35 @@ import { embedText } from '@/lib/gemini/embed'
 import { buildEmbedText, computeYearsExperience, toIsoDate, type CandidateInput } from './normalize'
 
 // Writes a candidate (+ education, experience, skills) to the DB.
-// Dedup: if a candidate with the same full_name (and matching first-education
-// country, when present) already exists, update it in place instead of creating
-// a duplicate. Returns the row id and whether it was an update.
+// Dedup: scraped rows dedup on linkedin_url (stable unique); otherwise on
+// full_name (+ matching first-education country). Returns the row id and
+// whether it was an update.
 export async function upsertCandidate(input: CandidateInput, createdBy: string | null = null) {
   const db = getServerClient()
   const embedding = await embedText(buildEmbedText(input))
-  const firstCountry = input.education?.[0]?.country ?? null
 
-  const { data: existing } = await db
-    .from('candidates')
-    .select('id, education(country)')
-    .eq('full_name', input.full_name)
-    .limit(1)
-    .maybeSingle()
-
-  const matched =
-    existing &&
-    (!firstCountry ||
-      (existing as any).education?.some((e: any) => e.country === firstCountry))
+  let existingId: string | null = null
+  if (input.linkedin_url) {
+    const { data } = await db
+      .from('candidates')
+      .select('id')
+      .eq('linkedin_url', input.linkedin_url)
+      .limit(1)
+      .maybeSingle()
+    existingId = (data as any)?.id ?? null
+  } else {
+    const firstCountry = input.education?.[0]?.country ?? null
+    const { data: existing } = await db
+      .from('candidates')
+      .select('id, education(country)')
+      .eq('full_name', input.full_name)
+      .limit(1)
+      .maybeSingle()
+    const matched =
+      existing &&
+      (!firstCountry || (existing as any).education?.some((e: any) => e.country === firstCountry))
+    existingId = matched ? (existing as any).id : null
+  }
 
   const row = {
     full_name: input.full_name,
@@ -30,6 +40,9 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
     summary: input.summary ?? null,
     source: input.source,
     years_experience: computeYearsExperience(input.experience ?? []),
+    linkedin_url: input.linkedin_url ?? null,
+    professional_email: input.professional_email ?? null,
+    refreshed_at: input.refreshed_at ?? null,
     raw_data: input.raw ?? null,
     embedding,
     created_by: createdBy,
@@ -39,8 +52,8 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
   let candidateId: string
   let updated = false
 
-  if (matched) {
-    candidateId = (existing as any).id
+  if (existingId) {
+    candidateId = existingId
     updated = true
     await db.from('candidates').update(row).eq('id', candidateId)
     await db.from('education').delete().eq('candidate_id', candidateId)
