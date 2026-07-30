@@ -8,6 +8,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Link href="/search">ค้นหา</Link>
         <Link href="/jobs">งาน</Link>
         <Link href="/shortlists">Shortlist</Link>
+        <Link href="/import">Import</Link>
         <Link href="/admin/users">Admin</Link>
         <Link href="/settings" style={{ marginLeft: 'auto' }}>
           ตั้งค่า

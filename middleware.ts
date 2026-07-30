@@ -38,6 +38,7 @@ export const config = {
     '/dashboard/:path*',
     '/search/:path*',
     '/jobs/:path*',
+    '/import/:path*',
     '/candidates/:path*',
     '/shortlists/:path*',
     '/admin/:path*',
