@@ -2,7 +2,6 @@ import { getGemini } from '@/lib/gemini/client'
 
 export type ChipFilters = {
   skills?: string[]
-  educationAbroad?: { anyForeign?: boolean; countries?: string[] }
   minYears?: number
   fieldOrDegree?: string[]
 }
@@ -20,8 +19,6 @@ Schema:
   "semanticQuery": "<short English phrase describing the ROLE and core skills, for semantic search>",
   "filters": {
     "skills": ["<hard skill>", ...],
-    "educationAbroad": { "anyForeign": true }  // if they say studied abroad generally
-      OR { "countries": ["USA", "UK", ...] },   // if they name countries (use short forms USA, UK)
     "minYears": <integer years of experience>,
     "fieldOrDegree": ["<field of study or degree>", ...]
   }

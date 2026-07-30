@@ -1,6 +1,5 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { embedText } from '@/lib/gemini/embed'
-import { normalizeCountry } from './normalizeCountry'
 import type { ChipFilters } from './extractFilters'
 
 export type SearchResult = {
@@ -12,7 +11,8 @@ export type SearchResult = {
 
 // Semantic search with hard filters. Embeds the semanticQuery, then delegates
 // filtering + ranking to the match_candidates_filtered RPC (filters applied in
-// SQL before ranking). Country chip values are canonicalized first.
+// SQL before ranking). The RPC's country/any-foreign params are left at their
+// defaults (education-abroad filtering was removed).
 export async function searchCandidates(
   semanticQuery: string,
   filters: ChipFilters
@@ -20,14 +20,10 @@ export async function searchCandidates(
   const db = getServerClient()
   const emb = await embedText(semanticQuery, 'RETRIEVAL_QUERY')
 
-  const countries = filters.educationAbroad?.countries?.map(normalizeCountry) ?? null
-
   const { data: matches } = await db.rpc('match_candidates_filtered', {
     query_embedding: emb,
     match_count: 20,
     p_skills: filters.skills?.length ? filters.skills : null,
-    p_any_foreign: filters.educationAbroad?.anyForeign ?? false,
-    p_countries: countries && countries.length ? countries : null,
     p_min_years: filters.minYears ?? null,
     p_field_or_degree: filters.fieldOrDegree?.length ? filters.fieldOrDegree : null,
   })

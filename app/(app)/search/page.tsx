@@ -47,10 +47,7 @@ export default function SearchPage() {
     }
     setParsing(false)
     const sq = intent.semanticQuery ?? nl
-    // educationAbroad is hidden from search for now (country dropped for real
-    // scraped data). Strip it so it never filters invisibly.
-    const f = { ...(intent.filters ?? {}) }
-    delete f.educationAbroad
+    const f = intent.filters ?? {}
     setSemanticQuery(sq)
     setFilters(f)
     await runSearch(sq, f)

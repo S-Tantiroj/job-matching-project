@@ -14,13 +14,7 @@ export default function CoverageStrip({
     { label: 'ตำแหน่ง', on: !!semanticQuery.trim() },
     { label: 'ประสบการณ์', on: filters.minYears != null },
     { label: 'สกิล', on: !!filters.skills?.length },
-    {
-      label: 'การศึกษา',
-      on:
-        !!filters.fieldOrDegree?.length ||
-        !!filters.educationAbroad?.anyForeign ||
-        !!filters.educationAbroad?.countries?.length,
-    },
+    { label: 'การศึกษา', on: !!filters.fieldOrDegree?.length },
   ]
 
   return (

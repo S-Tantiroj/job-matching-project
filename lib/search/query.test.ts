@@ -21,30 +21,27 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { searchCandidates } from './query'
 
-test('maps chip filters to RPC params and normalizes country values', async () => {
+test('maps chip filters to RPC params', async () => {
   rpcData = [ { id: 'c1', similarity: 0.92 }, { id: 'c2', similarity: 0.71 } ]
   candRows = [ { id: 'c1', full_name: 'A', headline: 'X' }, { id: 'c2', full_name: 'B', headline: 'Y' } ]
   const r = await searchCandidates('data scientist', {
     skills: ['Python'],
-    educationAbroad: { countries: ['USA'] },
     minYears: 3,
+    fieldOrDegree: ['Master'],
   })
   expect(rpcArgs.p_skills).toEqual(['Python'])
-  expect(rpcArgs.p_countries).toEqual(['United States'])
   expect(rpcArgs.p_min_years).toBe(3)
-  expect(rpcArgs.p_any_foreign).toBe(false)
+  expect(rpcArgs.p_field_or_degree).toEqual(['Master'])
   expect(r.map((x) => x.id)).toEqual(['c1', 'c2'])
   expect(r[0].score).toBe(92)
   expect(r[1].score).toBe(71)
 })
 
-test('passes nulls / false when no filters given', async () => {
+test('passes nulls when no filters given', async () => {
   await searchCandidates('anyone', {})
   expect(rpcArgs.p_skills).toBeNull()
-  expect(rpcArgs.p_countries).toBeNull()
   expect(rpcArgs.p_min_years).toBeNull()
   expect(rpcArgs.p_field_or_degree).toBeNull()
-  expect(rpcArgs.p_any_foreign).toBe(false)
 })
 
 test('clamps negative similarity to 0 and sorts by score descending', async () => {

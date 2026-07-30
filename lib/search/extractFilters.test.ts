@@ -16,14 +16,14 @@ test('parses the LLM JSON into semanticQuery + filters', async () => {
     semanticQuery: 'data scientist machine learning',
     filters: {
       skills: ['Python'],
-      educationAbroad: { countries: ['USA'] },
+      fieldOrDegree: ['Master'],
       minYears: 3,
     },
   })
-  const out = await extractSearchIntent('data scientist in Python who studied in the US, 3+ years')
+  const out = await extractSearchIntent('data scientist in Python with a Master, 3+ years')
   expect(out.semanticQuery).toBe('data scientist machine learning')
   expect(out.filters.skills).toEqual(['Python'])
-  expect(out.filters.educationAbroad).toEqual({ countries: ['USA'] })
+  expect(out.filters.fieldOrDegree).toEqual(['Master'])
   expect(out.filters.minYears).toBe(3)
 })
 
