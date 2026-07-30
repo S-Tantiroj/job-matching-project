@@ -9,6 +9,24 @@ export type SearchResult = {
   score: number // 0–100 semantic similarity
 }
 
+// In-memory cache of query embeddings, keyed by the semanticQuery text. Chip
+// edits re-run the search with the same semanticQuery but different filters, so
+// caching avoids re-embedding the unchanged text on every edit. Bounded FIFO;
+// lives per warm serverless instance (a cold start re-embeds once — acceptable).
+const queryEmbedCache = new Map<string, number[]>()
+
+async function queryEmbedding(text: string): Promise<number[]> {
+  const cached = queryEmbedCache.get(text)
+  if (cached) return cached
+  const emb = await embedText(text, 'RETRIEVAL_QUERY')
+  queryEmbedCache.set(text, emb)
+  if (queryEmbedCache.size > 100) {
+    const oldest = queryEmbedCache.keys().next().value as string
+    queryEmbedCache.delete(oldest)
+  }
+  return emb
+}
+
 // Semantic search with hard filters. Embeds the semanticQuery, then delegates
 // filtering + ranking to the match_candidates_filtered RPC (filters applied in
 // SQL before ranking). The RPC's country/any-foreign params are left at their
@@ -18,7 +36,7 @@ export async function searchCandidates(
   filters: ChipFilters
 ): Promise<SearchResult[]> {
   const db = getServerClient()
-  const emb = await embedText(semanticQuery, 'RETRIEVAL_QUERY')
+  const emb = await queryEmbedding(semanticQuery)
 
   const { data: matches } = await db.rpc('match_candidates_filtered', {
     query_embedding: emb,

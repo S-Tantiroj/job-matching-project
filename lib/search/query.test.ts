@@ -4,7 +4,8 @@ let rpcArgs: any = null
 let rpcData: any[] = [ { id: 'c1', similarity: 0.92 }, { id: 'c2', similarity: 0.71 } ]
 let candRows: any[] = [ { id: 'c1', full_name: 'A', headline: 'X' }, { id: 'c2', full_name: 'B', headline: 'Y' } ]
 
-vi.mock('@/lib/gemini/embed', () => ({ embedText: async () => new Array(768).fill(0.1) }))
+const embedMock = vi.fn(async () => new Array(768).fill(0.1))
+vi.mock('@/lib/gemini/embed', () => ({ embedText: (...a: any[]) => embedMock(...a) }))
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: () => ({
     rpc: async (_name: string, args: any) => {
@@ -51,4 +52,12 @@ test('clamps negative similarity to 0 and sorts by score descending', async () =
   expect(r.map((x) => x.id)).toEqual(['c4', 'c3'])
   expect(r[0].score).toBe(50)
   expect(r[1].score).toBe(0)
+})
+
+test('caches the query embedding across repeated searches (chip edits)', async () => {
+  embedMock.mockClear()
+  // Same semanticQuery, different filters — simulates editing chips.
+  await searchCandidates('a unique cached query', { skills: ['A'] })
+  await searchCandidates('a unique cached query', { skills: ['A', 'B'] })
+  expect(embedMock).toHaveBeenCalledTimes(1)
 })
