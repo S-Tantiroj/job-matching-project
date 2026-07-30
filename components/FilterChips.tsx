@@ -24,12 +24,9 @@ export default function FilterChips({
 }) {
   const [skill, setSkill] = useState('')
   const [field, setField] = useState('')
-  const [country, setCountry] = useState('')
 
   const skills = filters.skills ?? []
   const fields = filters.fieldOrDegree ?? []
-  const abroad = filters.educationAbroad
-  const countries = abroad?.countries ?? []
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '12px 0' }}>
@@ -56,51 +53,6 @@ export default function FilterChips({
             }
           }}
           placeholder="+ สกิล"
-          style={{ width: 100 }}
-        />
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <label style={{ fontSize: 13 }}>
-          <input
-            type="checkbox"
-            checked={!!abroad?.anyForeign}
-            onChange={(e) =>
-              onChange({
-                ...filters,
-                educationAbroad: e.target.checked ? { anyForeign: true } : undefined,
-              })
-            }
-          />{' '}
-          จบต่างประเทศ (ทั่วไป)
-        </label>
-        {countries.map((c) => (
-          <span key={c} style={pillStyle}>
-            จบ: {c}
-            <button
-              aria-label={`ลบ ${c}`}
-              onClick={() =>
-                onChange({
-                  ...filters,
-                  educationAbroad: { countries: countries.filter((x) => x !== c) },
-                })
-              }
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#3730a3' }}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && country.trim()) {
-              onChange({ ...filters, educationAbroad: { countries: [...countries, country.trim()] } })
-              setCountry('')
-            }
-          }}
-          placeholder="+ ประเทศ"
           style={{ width: 100 }}
         />
       </div>
