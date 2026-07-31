@@ -1,8 +1,6 @@
 'use client'
 import type { ChipFilters } from '@/lib/search/extractFilters'
 
-// Shows which search dimensions the current query covers. Each item turns green
-// with a check when it has a value. Derived from live state — no LLM call.
 export default function CoverageStrip({
   semanticQuery,
   filters,
@@ -18,22 +16,9 @@ export default function CoverageStrip({
   ]
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '10px 0' }}>
+    <div className="row" style={{ flexWrap: 'wrap', margin: '10px 0' }}>
       {items.map((it) => (
-        <span
-          key={it.label}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '3px 10px',
-            borderRadius: 999,
-            fontSize: 13,
-            background: it.on ? '#dcfce7' : '#f3f4f6',
-            color: it.on ? '#15803d' : '#9ca3af',
-            border: `1px solid ${it.on ? '#86efac' : '#e5e7eb'}`,
-          }}
-        >
+        <span key={it.label} className={`pill ${it.on ? 'pill-on' : 'pill-off'}`}>
           {it.on ? '✓' : '○'} {it.label}
         </span>
       ))}

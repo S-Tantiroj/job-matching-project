@@ -17,23 +17,16 @@ export function buildTimeline(edu: any[] = [], exp: any[] = []): TLItem[] {
 
 export default function Timeline({ edu, exp }: { edu?: any[]; exp?: any[] }) {
   const items = buildTimeline(edu, exp)
-  if (!items.length) return <p style={{ color: '#888' }}>ไม่มีข้อมูลไทม์ไลน์</p>
+  if (!items.length) return <p className="faint">ไม่มีข้อมูลไทม์ไลน์</p>
   return (
-    <ul style={{ listStyle: 'none', padding: 0, borderLeft: '2px solid #ddd' }}>
+    <ul style={{ listStyle: 'none', padding: 0, margin: 0, borderLeft: '2px solid var(--border)' }}>
       {items.map((i, k) => (
-        <li key={k} style={{ padding: '6px 0 6px 14px', position: 'relative' }}>
-          <span
-            style={{
-              display: 'inline-block',
-              minWidth: 48,
-              fontWeight: 600,
-              color: i.kind === 'edu' ? '#2563eb' : '#16a34a',
-            }}
-          >
+        <li key={k} style={{ padding: '7px 0 7px 16px' }}>
+          <span style={{ display: 'inline-block', minWidth: 46, fontWeight: 500, color: i.kind === 'edu' ? 'var(--accent)' : 'var(--ok)' }}>
             {i.year || '—'}
           </span>
           <span style={{ marginLeft: 8 }}>{i.label}</span>
-          <span style={{ marginLeft: 8, fontSize: 12, color: '#999' }}>
+          <span className="faint" style={{ marginLeft: 8, fontSize: 12 }}>
             {i.kind === 'edu' ? 'การศึกษา' : 'งาน'}
           </span>
         </li>

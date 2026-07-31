@@ -1,20 +1,25 @@
 import Link from 'next/link'
+import { getSession, hasRole } from '@/lib/auth/session'
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession()
+  const isAdmin = !!session && hasRole(session.role, 'admin')
+
   return (
-    <div style={{ maxWidth: 960, margin: '0 auto', padding: 24 }}>
-      <nav style={{ display: 'flex', gap: 16, paddingBottom: 16, borderBottom: '1px solid #eee' }}>
-        <Link href="/dashboard">Dashboard</Link>
-        <Link href="/search">ค้นหา</Link>
-        <Link href="/jobs">งาน</Link>
-        <Link href="/shortlists">Shortlist</Link>
-        <Link href="/import">Import</Link>
-        <Link href="/admin/users">Admin</Link>
-        <Link href="/settings" style={{ marginLeft: 'auto' }}>
-          ตั้งค่า
-        </Link>
+    <div>
+      <nav className="nav">
+        <Link href="/dashboard" className="nav-brand">Skouth</Link>
+        <Link href="/dashboard" className="nav-link">Dashboard</Link>
+        <Link href="/search" className="nav-link">Search</Link>
+        <Link href="/jobs" className="nav-link">Job</Link>
+        <Link href="/shortlists" className="nav-link">Shortlist</Link>
+        {isAdmin && <Link href="/import" className="nav-link">Import</Link>}
+        {isAdmin && <Link href="/admin/users" className="nav-link">Admin</Link>}
+        <div className="nav-right">
+          <Link href="/settings" className="nav-link">Setting</Link>
+        </div>
       </nav>
-      <div style={{ paddingTop: 20 }}>{children}</div>
+      <div className="container">{children}</div>
     </div>
   )
 }

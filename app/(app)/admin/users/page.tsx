@@ -17,24 +17,14 @@ export default async function AdminUsers() {
   return (
     <main>
       <h1>จัดการผู้ใช้</h1>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
-        <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
-            <th style={{ padding: 8 }}>ผู้ใช้</th>
-            <th style={{ padding: 8 }}>สิทธิ์</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(users ?? []).map((u: any) => (
-            <tr key={u.id} style={{ borderBottom: '1px solid #f2f2f2' }}>
-              <td style={{ padding: 8 }}>{u.display_name ?? u.id}</td>
-              <td style={{ padding: 8 }}>
-                <RoleSelect userId={u.id} role={u.role} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="list">
+        {(users ?? []).map((u: any) => (
+          <div key={u.id} className="list-row">
+            <span style={{ flex: 1, fontWeight: 500 }}>{u.display_name ?? u.id}</span>
+            <RoleSelect userId={u.id} role={u.role} />
+          </div>
+        ))}
+      </div>
     </main>
   )
 }

@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { getBrowserClient } from '@/lib/supabase/client'
 
-// Per-user settings stored in profiles.settings (jsonb). Currently: a default
-// requirement string prefilled on the candidate analyze panel later if desired.
 export default function SettingsPage() {
   const db = getBrowserClient()
   const [defaultRequirement, setDefaultRequirement] = useState('')
@@ -24,10 +22,7 @@ export default function SettingsPage() {
     setMsg('')
     const { data: { user } } = await db.auth.getUser()
     if (!user) return
-    const { error } = await db
-      .from('profiles')
-      .update({ settings: { defaultRequirement } })
-      .eq('id', user.id)
+    const { error } = await db.from('profiles').update({ settings: { defaultRequirement } }).eq('id', user.id)
     setMsg(error ? error.message : 'บันทึกแล้ว')
   }
 
@@ -37,47 +32,32 @@ export default function SettingsPage() {
   }
 
   return (
-    <main style={{ maxWidth: 520 }}>
+    <main style={{ maxWidth: 560 }}>
       <h1>ตั้งค่า</h1>
-      <label style={{ display: 'block', margin: '16px 0 4px', fontWeight: 600 }}>
-        ตำแหน่ง/สกิลที่มองหาบ่อย
-      </label>
-      <p style={{ margin: '0 0 8px', fontSize: 13, color: '#777' }}>
-        กรอกคุณสมบัติที่บริษัทคุณมองหาบ่อยที่สุด ระบบจะเติมข้อความนี้ให้อัตโนมัติในช่อง
-        “ประเมินความเหมาะสม” ตอนเปิดดูโปรไฟล์ผู้สมัคร จะได้ไม่ต้องพิมพ์ซ้ำทุกครั้ง
-      </p>
-      <input
-        style={{ width: '100%' }}
-        value={defaultRequirement}
-        onChange={(e) => setDefaultRequirement(e.target.value)}
-        placeholder="เช่น Data scientist สาย Python ที่จบจากต่างประเทศ"
-        disabled={!loaded}
-      />
-      <div style={{ marginTop: 12 }}>
-        <button onClick={save} disabled={!loaded}>
-          บันทึก
-        </button>
-      </div>
-      {msg && <p style={{ color: '#16a34a' }}>{msg}</p>}
 
-      <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #eee' }} />
-      <h2 style={{ fontSize: 16 }}>บัญชี</h2>
-      <p style={{ margin: '0 0 8px', fontSize: 13, color: '#777' }}>
-        ออกจากระบบบัญชีนี้บนอุปกรณ์นี้
-      </p>
-      <button
-        onClick={logout}
-        style={{
-          background: '#dc2626',
-          color: '#fff',
-          border: 'none',
-          padding: '8px 16px',
-          borderRadius: 6,
-          cursor: 'pointer',
-        }}
-      >
-        ออกจากระบบ
-      </button>
+      <div className="card">
+        <h3>ตำแหน่ง/สกิลที่มองหาบ่อย</h3>
+        <p className="faint" style={{ fontSize: 13, marginTop: 0 }}>
+          กรอกคุณสมบัติที่บริษัทคุณมองหาบ่อยที่สุด ระบบจะเติมข้อความนี้ให้อัตโนมัติในช่อง “ประเมินความเหมาะสม” ตอนเปิดดูโปรไฟล์ผู้สมัคร
+        </p>
+        <input
+          className="input"
+          value={defaultRequirement}
+          onChange={(e) => setDefaultRequirement(e.target.value)}
+          placeholder="เช่น Data scientist สาย Python ที่จบจากต่างประเทศ"
+          disabled={!loaded}
+        />
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="btn btn-primary" onClick={save} disabled={!loaded}>บันทึก</button>
+          {msg && <span style={{ color: 'var(--ok)' }}>{msg}</span>}
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3>บัญชี</h3>
+        <p className="faint" style={{ fontSize: 13, marginTop: 0 }}>ออกจากระบบบัญชีนี้บนอุปกรณ์นี้</p>
+        <button className="btn" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={logout}>ออกจากระบบ</button>
+      </div>
     </main>
   )
 }

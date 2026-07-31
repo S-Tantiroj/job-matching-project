@@ -2,19 +2,6 @@
 import { useState } from 'react'
 import type { ChipFilters } from '@/lib/search/extractFilters'
 
-const pillStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  background: '#eef2ff',
-  color: '#3730a3',
-  borderRadius: 999,
-  padding: '4px 10px',
-  fontSize: 13,
-}
-
-// Editable filter chips. All edits call onChange with the next ChipFilters;
-// the parent re-runs the search (no LLM).
 export default function FilterChips({
   filters,
   onChange,
@@ -29,21 +16,17 @@ export default function FilterChips({
   const fields = filters.fieldOrDegree ?? []
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '12px 0' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+    <div className="stack" style={{ gap: 10, margin: '12px 0' }}>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
         {skills.map((s) => (
-          <span key={s} style={pillStyle}>
+          <span key={s} className="chip">
             สกิล: {s}
-            <button
-              aria-label={`ลบ ${s}`}
-              onClick={() => onChange({ ...filters, skills: skills.filter((x) => x !== s) })}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#3730a3' }}
-            >
-              ×
-            </button>
+            <button className="chip-x" aria-label={`ลบ ${s}`} onClick={() => onChange({ ...filters, skills: skills.filter((x) => x !== s) })}>×</button>
           </span>
         ))}
         <input
+          className="input"
+          style={{ width: 110 }}
           value={skill}
           onChange={(e) => setSkill(e.target.value)}
           onKeyDown={(e) => {
@@ -53,24 +36,19 @@ export default function FilterChips({
             }
           }}
           placeholder="+ สกิล"
-          style={{ width: 100 }}
         />
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
         {fields.map((f) => (
-          <span key={f} style={pillStyle}>
+          <span key={f} className="chip">
             สาขา: {f}
-            <button
-              aria-label={`ลบ ${f}`}
-              onClick={() => onChange({ ...filters, fieldOrDegree: fields.filter((x) => x !== f) })}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#3730a3' }}
-            >
-              ×
-            </button>
+            <button className="chip-x" aria-label={`ลบ ${f}`} onClick={() => onChange({ ...filters, fieldOrDegree: fields.filter((x) => x !== f) })}>×</button>
           </span>
         ))}
         <input
+          className="input"
+          style={{ width: 140 }}
           value={field}
           onChange={(e) => setField(e.target.value)}
           onKeyDown={(e) => {
@@ -80,23 +58,18 @@ export default function FilterChips({
             }
           }}
           placeholder="+ สาขา/ปริญญา"
-          style={{ width: 130 }}
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-        ประสบการณ์ขั้นต่ำ (ปี):
+      <div className="row" style={{ fontSize: 13 }}>
+        <span className="faint">ประสบการณ์ขั้นต่ำ (ปี):</span>
         <input
+          className="input"
           type="number"
           min={0}
+          style={{ width: 80 }}
           value={filters.minYears ?? ''}
-          onChange={(e) =>
-            onChange({
-              ...filters,
-              minYears: e.target.value ? Number(e.target.value) : undefined,
-            })
-          }
-          style={{ width: 70 }}
+          onChange={(e) => onChange({ ...filters, minYears: e.target.value ? Number(e.target.value) : undefined })}
         />
       </div>
     </div>

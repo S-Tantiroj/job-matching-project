@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import ScoreBadge from '@/components/ScoreBadge'
+import ScoreBadge, { scoreClass } from '@/components/ScoreBadge'
 import FilterChips from '@/components/FilterChips'
 import CoverageStrip from '@/components/CoverageStrip'
 import type { ChipFilters } from '@/lib/search/extractFilters'
@@ -15,7 +15,6 @@ export default function SearchPage() {
   const [searching, setSearching] = useState(false)
   const [ran, setRan] = useState(false)
 
-  // Run search from a given semanticQuery + filters (no LLM).
   const runSearch = async (sq: string, f: ChipFilters) => {
     if (!sq.trim()) return
     setSearching(true)
@@ -30,7 +29,6 @@ export default function SearchPage() {
     setSearching(false)
   }
 
-  // Parse NL -> chips (LLM), then search.
   const parseAndSearch = async () => {
     if (!nl.trim() || parsing) return
     setParsing(true)
@@ -53,7 +51,6 @@ export default function SearchPage() {
     await runSearch(sq, f)
   }
 
-  // Chip edits: update state and re-run immediately (no LLM).
   const onFiltersChange = (f: ChipFilters) => {
     setFilters(f)
     runSearch(semanticQuery, f)
@@ -63,15 +60,15 @@ export default function SearchPage() {
     <main>
       <h1>ค้นหาผู้สมัคร</h1>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+      <div className="row" style={{ margin: '12px 0' }}>
         <input
-          style={{ flex: 1 }}
+          className="input"
           value={nl}
           onChange={(e) => setNl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && parseAndSearch()}
           placeholder="พิมพ์คำค้นหาทั่วไป เช่น data scientist สาย Python ที่จบจากอเมริกา 3 ปีขึ้นไป"
         />
-        <button onClick={parseAndSearch} disabled={parsing || !nl}>
+        <button className="btn btn-primary" onClick={parseAndSearch} disabled={parsing || !nl}>
           {parsing ? 'กำลังอ่าน…' : 'ค้นหา'}
         </button>
       </div>
@@ -79,38 +76,42 @@ export default function SearchPage() {
       <CoverageStrip semanticQuery={semanticQuery} filters={filters} />
 
       {semanticQuery && (
-        <>
-          <div style={{ fontSize: 13, color: '#777', marginBottom: 4 }}>คำอธิบายที่ค้นหา (แก้ได้)</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="card" style={{ margin: '4px 0 8px' }}>
+          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>คำอธิบายที่ค้นหา (แก้ได้)</div>
+          <div className="row">
             <input
-              style={{ flex: 1 }}
+              className="input"
               value={semanticQuery}
               onChange={(e) => setSemanticQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && runSearch(semanticQuery, filters)}
             />
-            <button onClick={() => runSearch(semanticQuery, filters)} disabled={searching}>
+            <button className="btn" onClick={() => runSearch(semanticQuery, filters)} disabled={searching}>
               ค้นหาใหม่
             </button>
           </div>
           <FilterChips filters={filters} onChange={onFiltersChange} />
-        </>
+        </div>
       )}
 
-      <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>
+      {res.length > 0 && (
+        <div className="section-header">
+          <h2>ผู้สมัคร {res.length} คน</h2>
+          <span className="faint" style={{ fontSize: 12 }}>เรียงตามความใกล้เคียง</span>
+        </div>
+      )}
+      <div className="stack">
         {res.map((c) => (
-          <li
-            key={c.id}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid #f2f2f2' }}
-          >
+          <Link key={c.id} href={`/candidates/${c.id}`} className="result-row" style={{ color: 'inherit' }}>
             <ScoreBadge score={c.score} />
-            <Link href={`/candidates/${c.id}`} style={{ fontWeight: 600 }}>
-              {c.full_name}
-            </Link>
-            <span style={{ color: '#888' }}>{c.headline}</span>
-          </li>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 500 }}>{c.full_name}</div>
+              <div className="muted" style={{ fontSize: 12 }}>{c.headline}</div>
+            </div>
+            <span className="faint">›</span>
+          </Link>
         ))}
-      </ul>
-      {ran && !searching && res.length === 0 && <p style={{ color: '#888' }}>ไม่พบผู้สมัคร</p>}
+      </div>
+      {ran && !searching && res.length === 0 && <p className="faint">ไม่พบผู้สมัคร</p>}
     </main>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 
-// Admin control to change a user's role. POSTs to /api/admin/users.
 export default function RoleSelect({
   userId,
   role,
@@ -27,12 +26,12 @@ export default function RoleSelect({
   }
 
   return (
-    <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-      <select value={value} onChange={(e) => change(e.target.value as any)} disabled={saving}>
+    <span className="row">
+      <select className="select" style={{ width: 'auto' }} value={value} onChange={(e) => change(e.target.value as any)} disabled={saving}>
         <option value="member">member</option>
         <option value="admin">admin</option>
       </select>
-      {msg && <span style={{ fontSize: 12, color: '#16a34a' }}>{msg}</span>}
+      {msg && <span style={{ fontSize: 12, color: 'var(--ok)' }}>{msg}</span>}
     </span>
   )
 }

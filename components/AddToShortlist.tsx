@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react'
 import { getBrowserClient } from '@/lib/supabase/client'
 
-// Lets the signed-in user add a candidate to one of their shortlists (or a new one).
-// Relies on RLS: shortlists are scoped to the owner (auth.uid()).
 export default function AddToShortlist({ candidateId }: { candidateId: string }) {
   const db = getBrowserClient()
   const [lists, setLists] = useState<{ id: string; name: string }[]>([])
@@ -43,22 +41,20 @@ export default function AddToShortlist({ candidateId }: { candidateId: string })
   }
 
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 16, marginTop: 16 }}>
+    <div className="card" style={{ marginTop: 16 }}>
       <h3>เพิ่มเข้า Shortlist</h3>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <select value={selected} onChange={(e) => setSelected(e.target.value)}>
+      <div className="row" style={{ flexWrap: 'wrap' }}>
+        <select className="select" style={{ width: 'auto' }} value={selected} onChange={(e) => setSelected(e.target.value)}>
           <option value="">— เลือก shortlist —</option>
           {lists.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
+            <option key={l.id} value={l.id}>{l.name}</option>
           ))}
         </select>
-        <span>หรือสร้างใหม่:</span>
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="ชื่อ shortlist" />
-        <button onClick={add}>เพิ่ม</button>
+        <span className="faint">หรือสร้างใหม่:</span>
+        <input className="input" style={{ width: 160 }} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="ชื่อ shortlist" />
+        <button className="btn btn-primary" onClick={add}>เพิ่ม</button>
       </div>
-      {msg && <p style={{ marginTop: 8, color: '#16a34a' }}>{msg}</p>}
+      {msg && <p style={{ marginTop: 8, color: 'var(--ok)' }}>{msg}</p>}
     </div>
   )
 }

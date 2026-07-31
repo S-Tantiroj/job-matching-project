@@ -15,18 +15,15 @@ export default function Login() {
   }
 
   return (
-    <main style={{ maxWidth: 360, margin: '80px auto', display: 'grid', gap: 12 }}>
-      <h1>เข้าสู่ระบบ</h1>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="อีเมล" />
-      <input
-        type="password"
-        value={pw}
-        onChange={(e) => setPw(e.target.value)}
-        placeholder="รหัสผ่าน"
-      />
-      <button onClick={submit}>เข้าสู่ระบบ</button>
-      {msg && <p style={{ color: 'crimson' }}>{msg}</p>}
-      <a href="/signup">ยังไม่มีบัญชี? สมัครสมาชิก</a>
+    <main className="auth-wrap">
+      <div className="card stack">
+        <h1 style={{ margin: 0 }}>เข้าสู่ระบบ</h1>
+        <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="อีเมล" />
+        <input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="รหัสผ่าน" />
+        <button className="btn btn-primary" onClick={submit}>เข้าสู่ระบบ</button>
+        {msg && <p style={{ color: 'var(--bad)', margin: 0 }}>{msg}</p>}
+        <a href="/signup">ยังไม่มีบัญชี? สมัครสมาชิก</a>
+      </div>
     </main>
   )
 }

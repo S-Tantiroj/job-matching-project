@@ -1,5 +1,7 @@
+import './globals.css'
+
 export const metadata = {
-  title: 'Thai Candidate Sourcing',
+  title: 'Skouth',
   description: 'Internal candidate sourcing and evaluation platform',
 }
 

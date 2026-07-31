@@ -5,6 +5,9 @@ import AddToShortlist from '@/components/AddToShortlist'
 
 export const dynamic = 'force-dynamic'
 
+const initials = (name: string) =>
+  name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
+
 export default async function CandidatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const db = getServerClient()
@@ -15,32 +18,36 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
     .eq('id', id)
     .single()
 
-  if (!c) return <main><p>ไม่พบผู้สมัคร</p></main>
+  if (!c) return <main><p className="faint">ไม่พบผู้สมัคร</p></main>
 
   const skills: string[] = (c as any).candidate_skills?.map((x: any) => x.skills?.name).filter(Boolean) ?? []
 
   return (
     <main>
-      <h1>{(c as any).full_name}</h1>
-      <p style={{ color: '#666' }}>{(c as any).headline}</p>
-      {(c as any).location && <p style={{ color: '#888' }}>{(c as any).location}</p>}
-      {(c as any).summary && <p>{(c as any).summary}</p>}
-
-      {skills.length > 0 && (
-        <div style={{ margin: '12px 0', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {skills.map((s) => (
-            <span
-              key={s}
-              style={{ background: '#eef2ff', color: '#3730a3', padding: '2px 10px', borderRadius: 999, fontSize: 13 }}
-            >
-              {s}
-            </span>
-          ))}
+      <div className="card">
+        <div className="row" style={{ alignItems: 'flex-start' }}>
+          <span className="avatar" style={{ width: 44, height: 44 }}>{initials((c as any).full_name)}</span>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ margin: 0 }}>{(c as any).full_name}</h1>
+            <p className="muted" style={{ margin: '2px 0' }}>{(c as any).headline}</p>
+            {(c as any).location && <p className="faint" style={{ margin: 0, fontSize: 13 }}>{(c as any).location}</p>}
+          </div>
+          {(c as any).linkedin_url && (
+            <a href={(c as any).linkedin_url} target="_blank" rel="noreferrer" className="btn">LinkedIn ↗</a>
+          )}
         </div>
-      )}
+        {(c as any).summary && <p style={{ marginTop: 12 }}>{(c as any).summary}</p>}
+        {skills.length > 0 && (
+          <div className="row" style={{ flexWrap: 'wrap', marginTop: 12 }}>
+            {skills.map((s) => <span key={s} className="chip">{s}</span>)}
+          </div>
+        )}
+      </div>
 
-      <h2>ไทม์ไลน์</h2>
-      <Timeline edu={(c as any).education} exp={(c as any).experience} />
+      <div className="section-header"><h2>ไทม์ไลน์</h2></div>
+      <div className="card">
+        <Timeline edu={(c as any).education} exp={(c as any).experience} />
+      </div>
 
       <AnalyzePanel candidateId={id} />
       <AddToShortlist candidateId={id} />
