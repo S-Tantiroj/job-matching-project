@@ -19,6 +19,9 @@ vi.mock('@/lib/gemini/parse', () => ({
 }))
 vi.mock('@/lib/auth/session', () => ({
   getSession: async () => ({ userId: 'u1', role: 'member' }),
+  // Route now gates on data_manager; these tests exercise ingest parsing/upsert
+  // logic, not the permission check, so hasRole is stubbed to always authorize.
+  hasRole: () => true,
 }))
 
 import { POST } from './route'

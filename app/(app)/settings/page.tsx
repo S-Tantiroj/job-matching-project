@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { getBrowserClient } from '@/lib/supabase/client'
+import ChangePasswordCard from '@/components/ChangePasswordCard'
 
 export default function SettingsPage() {
   const db = getBrowserClient()
@@ -52,6 +53,8 @@ export default function SettingsPage() {
           {msg && <span style={{ color: 'var(--ok)' }}>{msg}</span>}
         </div>
       </div>
+
+      <ChangePasswordCard />
 
       <div className="card" style={{ marginTop: 16 }}>
         <h3>บัญชี</h3>

@@ -3,17 +3,21 @@ import { parseCsv } from '@/lib/ingest/csv'
 import { parseLinkedInCsv } from '@/lib/ingest/linkedin'
 import { parseResume } from '@/lib/gemini/parse'
 import { upsertCandidate } from '@/lib/ingest/upsert'
-import { getSession } from '@/lib/auth/session'
+import { getSession, hasRole } from '@/lib/auth/session'
 import type { CandidateInput } from '@/lib/ingest/normalize'
 
 // POST /api/ingest
 //   { type: 'csv',      csv: string, mapping: Record<string,string> }
 //   { type: 'linkedin', csv: string }
 //   { type: 'upload',   text: string }
-// Returns { imported, updated, errors }. Requires an authenticated session.
+// Returns { imported, updated, errors }. Requires an authenticated session
+// with role data_manager or higher — this endpoint bulk-inserts/overwrites candidates.
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (!hasRole(session.role, 'data_manager')) {
+    return NextResponse.json({ error: 'คุณไม่มีสิทธิ์นำเข้าข้อมูลนี้' }, { status: 403 })
+  }
   const userId = session.userId
 
   const body = await req.json()

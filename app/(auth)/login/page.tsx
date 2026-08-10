@@ -22,6 +22,7 @@ export default function Login() {
         <input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} placeholder="รหัสผ่าน" />
         <button className="btn btn-primary" onClick={submit}>เข้าสู่ระบบ</button>
         {msg && <p style={{ color: 'var(--bad)', margin: 0 }}>{msg}</p>}
+        <a href="/forgot-password">ลืมรหัสผ่าน?</a>
         <a href="/signup">ยังไม่มีบัญชี? สมัครสมาชิก</a>
       </div>
     </main>
