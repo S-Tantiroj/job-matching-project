@@ -76,7 +76,8 @@ clean up after themselves (use a unique name, delete on teardown).
 `candidates` (+ `embedding vector(768)`, `source`, `raw_data` jsonb) with child
 tables `education`, `experience`, `skills`/`candidate_skills`,
 `shortlists`/`shortlist_candidates`, `analyses` (AI-score cache keyed by
-`requirement_hash`), and `profiles` (Supabase Auth + `role` admin|member).
+`requirement_hash`), and `profiles` (Supabase Auth + `role`
+admin|data_manager|member, see migration 009).
 
 ## Progress
 
@@ -104,6 +105,64 @@ Plan: `docs/superpowers/plans/2026-07-23-job-matching.md`
 - [x] Shared scoreCandidateAgainst + job deep-score API (reuses analyses cache)
 - [x] Synthetic job seed (scripts/seed-jobs.ts)
 
+### Phase 3 — LinkedIn CSV ingest
+- [x] Migration 008 — linkedin_url / professional_email / refreshed_at + partial
+      unique index on linkedin_url for dedup
+- [x] `parseLinkedInDateRange`, `parseLinkedInCsv` (deterministic, header-tolerant)
+- [x] `/api/ingest` type `linkedin`, `/import` page
+
+### Phase 4 — Filter-chip search
+- [x] Migration 006/007 — `match_candidates_filtered` (hard filters applied in SQL
+      before vector ranking) + `candidates.years_experience`
+- [x] `extractSearchIntent` (one flash call: NL → semanticQuery + chips),
+      `searchCandidates` via the filtered RPC, query-embedding cache
+- [x] Chip UI + coverage strip. Note: `educationAbroad`/country filtering was
+      REMOVED — the RPC still has `p_any_foreign`/`p_countries` params, left at
+      their defaults.
+
+### Phase 5 — UI redesign
+Spec/plan: `docs/superpowers/{specs,plans}/2026-07-30-ui-redesign*`
+- [x] `app/globals.css` — design tokens + ~40 reusable classes. Every page uses
+      these; avoid new ad-hoc inline styles.
+- [x] Every page/component restyled onto it; sticky nav; dashboard shortlist cards
+
+### Phase 6 — v2 Data management
+Spec/plan: `docs/superpowers/{specs,plans}/2026-08-06-v2-data-management*`
+- [x] Migration 009 — role `data_manager` added to the `user_role` enum.
+      **`hasRole` is now hierarchical** (`member` 1 < `data_manager` 2 < `admin` 3)
+      via `ROLE_RANK` in `lib/auth/session.ts`.
+- [x] `/candidates` data table (server component; sort/search/paginate via URL
+      params, whitelisted in `lib/candidates/listParams.ts`)
+- [x] Data-quality badges — `lib/candidates/quality.ts`. A candidate with a NULL
+      `embedding` never appears in search (both RPCs filter it out); this table is
+      the only place that surfaces it. Migration 010 = `duplicate_candidate_names`.
+- [x] Edit main fields — `PATCH /api/candidates/[id]` → `lib/candidates/update.ts`.
+      **Never build candidate edits on `upsertCandidate`** — that deletes and
+      rewrites the education/experience/skills child rows. Re-embed is decided by
+      comparing `buildEmbedText(before) !== buildEmbedText(after)`, so it stays
+      correct for any field without maintenance.
+- [x] Change password (verifies the current one via `signInWithPassword` first —
+      Supabase's `updateUser` does not check it), forgot/reset password
+- [x] Email confirmation on signup → `/auth/confirm` auto-logs in then redirects.
+      That page exists because `middleware.ts` guards `/dashboard` from cookies
+      server-side and would bounce the user before the client can store the
+      session; `/auth/*` is deliberately outside the middleware matcher.
+
+### Not done / deliberately deferred
+- Google sign-in — deferred from v2. Risk: an existing email/password user
+  signing in with Google may get a NEW auth user (and so a new profile, role
+  `member`, no access to their old shortlists) instead of a linked identity.
+  Verify on a preview deploy before enabling.
+- Invite-only membership (admin creates members, no public signup) — discussed,
+  not specced. Note that deleting the `/signup` page does not close signups: the
+  anon key is public, so `POST /auth/v1/signup` still works. The real switch is
+  Supabase → Authentication → Providers → Email → "Allow new users to sign up".
+- Tables `public.resumes` and `public.matches` have RLS DISABLED and are exposed
+  through PostgREST (Supabase advisor, ERROR level). Not created by any migration
+  in this repo.
+- `/api/ingest`'s 403 role gate has no test — `route.test.ts` stubs
+  `hasRole: () => true`.
+
 ## Gemini free-tier note
 
 Free tier = 5 generate requests/min per model. Do NOT call the generation model
@@ -113,6 +172,24 @@ add a queue/rate-limit.
 
 ## Known environment note
 
-Git and npm cannot run against this drive from the Cowork Linux sandbox
-(mount permission limits + blocked npm registry). Run `npm install`, tests, and
-git commits natively on Windows.
+From the Cowork Linux sandbox, this drive is mounted read-mostly:
+
+- **Working-tree file writes work.** Creating and editing source files is fine —
+  that is how implementation happens from a session.
+- **Git reads work:** `git log`, `git status`, `git diff`, `git branch`, `git show`.
+- **Git writes do NOT work.** Anything needing `.git/index.lock` — `git add`,
+  `git commit`, `git checkout -- <file>` — fails with `Operation not permitted`,
+  because the sandbox cannot create or unlink files inside `.git/`.
+- **npm does not work** (blocked registry), so `npm install`, `npm run build`,
+  and `npx vitest` must run on Windows.
+
+**Trap:** a failed git write leaves a stale zero-byte `.git/index.lock` that the
+sandbox cannot delete. Every later git command on Windows then fails with
+"Another git process seems to be running." Fix on Windows with
+`Remove-Item .git\index.lock -Force`. Do not attempt git writes from a session —
+hand the user the commands instead.
+
+**Line endings:** the repo is checked out CRLF on Windows. Files rewritten from
+the sandbox can come back LF, which shows up as a whole-file diff with no real
+content change (`next-env.d.ts` is the usual victim). Check `git diff` before
+staging and `git checkout --` anything that is pure line-ending churn.
