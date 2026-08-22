@@ -148,6 +148,31 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-06-v2-data-management*`
       server-side and would bounce the user before the client can store the
       session; `/auth/*` is deliberately outside the middleware matcher.
 
+### Phase 7 — v3 Self-assessment (user uploads their own resume PDF)
+Spec/plan: `docs/superpowers/{specs,plans}/2026-08-20-self-assessment*`
+- [x] Migration 011 — **dropped the orphaned `resumes` and `matches` tables** (both
+      empty, unreferenced, not created by any migration here, and RLS-disabled) and
+      created `self_profiles` + `resume_assessments` with owner-scoped RLS.
+      `matches` MUST be dropped before `resumes` — there is a real FK
+      `matches.resume_id -> resumes(id)`; the reverse order aborts the migration.
+- [x] Migration 012 — `match_jobs` RPC, the mirror of `match_candidates` over `jobs`.
+      The 768-dim shared space is what makes ranking jobs for a profile possible.
+- [x] PDF read natively by Gemini (`inlineData: { mimeType, data: <base64> }` —
+      camelCase; the Python docs' snake_case does not work in the JS SDK). No
+      PDF-parsing library. `lib/gemini/parsePdf.ts` + `lib/gemini/assess.ts` are
+      deliberately two calls: extraction is factual, assessment is judgment, and
+      the assessment can be re-run from `parsed_data` without a re-upload.
+- [x] Upload is `FormData`, NOT base64 JSON like the other routes — base64 inflates
+      ~33% and Vercel caps bodies at 4.5MB. If any Gemini/embed step fails, nothing
+      is written; a profile with a null embedding would silently never rank.
+- [x] `/self-assessment` page + `matchJobsForProfile`. Ranking makes ZERO LLM calls;
+      role scores cache in `resume_assessments` by `requirement_hash`.
+- **Privacy is structural:** `self_profiles` is a separate table from `candidates`,
+  so uploaded data cannot reach recruiter search. Every route uses the service-role
+  client, which bypasses RLS — `.eq('owner_id', session.userId)` IS the access
+  control, not a second layer. Id-bearing routes answer **404, not 403**, to a
+  non-owner so the response cannot confirm an id exists.
+
 ### Not done / deliberately deferred
 - Google sign-in — deferred from v2. Risk: an existing email/password user
   signing in with Google may get a NEW auth user (and so a new profile, role
@@ -157,9 +182,6 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-06-v2-data-management*`
   not specced. Note that deleting the `/signup` page does not close signups: the
   anon key is public, so `POST /auth/v1/signup` still works. The real switch is
   Supabase → Authentication → Providers → Email → "Allow new users to sign up".
-- Tables `public.resumes` and `public.matches` have RLS DISABLED and are exposed
-  through PostgREST (Supabase advisor, ERROR level). Not created by any migration
-  in this repo.
 - `/api/ingest`'s 403 role gate has no test — `route.test.ts` stubs
   `hasRole: () => true`.
 

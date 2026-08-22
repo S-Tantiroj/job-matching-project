@@ -43,5 +43,6 @@ export const config = {
     '/shortlists/:path*',
     '/admin/:path*',
     '/settings/:path*',
+    '/self-assessment/:path*',
   ],
 }

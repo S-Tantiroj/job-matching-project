@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Link href="/search" className="nav-link">Search</Link>
         <Link href="/jobs" className="nav-link">Job</Link>
         <Link href="/shortlists" className="nav-link">Shortlist</Link>
+        <Link href="/self-assessment" className="nav-link">ประเมินตัวเอง</Link>
         {isDataManager && <Link href="/candidates" className="nav-link">ข้อมูล</Link>}
         {isDataManager && <Link href="/import" className="nav-link">Import</Link>}
         {isAdmin && <Link href="/admin/users" className="nav-link">Admin</Link>}
