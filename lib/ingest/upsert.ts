@@ -1,13 +1,33 @@
 import { getServerClient } from '@/lib/supabase/server'
 import { embedText } from '@/lib/gemini/embed'
+import { embedHash } from './embedHash'
 import { buildEmbedText, computeYearsExperience, toIsoDate, type CandidateInput } from './normalize'
 
 // Writes a candidate (+ education, experience, skills) to the DB.
 // Dedup: scraped rows dedup on linkedin_url (stable unique); otherwise on
-// full_name (+ matching first-education country). Returns the row id and
-// whether it was an update.
-export async function upsertCandidate(input: CandidateInput, createdBy: string | null = null) {
+// full_name (+ matching first-education country).
+//
+// คืน suppressed: true เมื่อ linkedin_url อยู่ในรายชื่อระงับ — ไม่เขียนอะไรเลยและ id เป็น null
+export async function upsertCandidate(
+  input: CandidateInput,
+  createdBy: string | null = null,
+  ingestRunId: string | null = null
+): Promise<{ id: string | null; updated: boolean; suppressed: boolean }> {
   const db = getServerClient()
+
+  // เช็ครายชื่อระงับก่อน embed เสมอ — ไม่เสียโควตากับคนที่จะไม่ถูกเขียนอยู่แล้ว
+  //
+  // การเช็คอยู่ที่นี่ ไม่ใช่ในสคริปต์ เพราะกติกาของโปรเจกต์คือทุกเส้นทาง ingest ลงที่ไฟล์นี้
+  // ถ้าเช็คแค่ในสคริปต์ วันที่ใครเอา CSV ชุดเดิมมาวางที่ /import ด้วยมือ คนที่ขอให้ลบจะกลับเข้ามาใหม่
+  if (input.linkedin_url) {
+    const { data: blocked } = await db
+      .from('suppressed_profiles')
+      .select('id')
+      .eq('linkedin_url', input.linkedin_url)
+      .maybeSingle()
+    if (blocked) return { id: null, updated: false, suppressed: true }
+  }
+
   const embedding = await embedText(buildEmbedText(input))
 
   let existingId: string | null = null
@@ -45,6 +65,8 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
     refreshed_at: input.refreshed_at ?? null,
     raw_data: input.raw ?? null,
     embedding,
+    embed_hash: embedHash(input),
+    ingest_run_id: ingestRunId,
     created_by: createdBy,
     updated_at: new Date().toISOString(),
   }
@@ -88,5 +110,5 @@ export async function upsertCandidate(input: CandidateInput, createdBy: string |
     await db.from('candidate_skills').upsert({ candidate_id: candidateId, skill_id: (sk as any).id })
   }
 
-  return { id: candidateId, updated }
+  return { id: candidateId, updated, suppressed: false }
 }

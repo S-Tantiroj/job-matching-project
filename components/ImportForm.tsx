@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-type Result = { imported: number; updated: number; errors: string[] }
+type Result = { imported: number; updated: number; skipped?: number; errors: string[] }
 
 export default function ImportForm() {
   const [csv, setCsv] = useState('')
@@ -43,7 +43,7 @@ export default function ImportForm() {
       {result && (
         <div style={{ marginTop: 12 }}>
           <p>
-            เพิ่มใหม่ <strong>{result.imported}</strong> · อัปเดต <strong>{result.updated}</strong> · ผิดพลาด <strong>{result.errors.length}</strong>
+            เพิ่มใหม่ <strong>{result.imported}</strong> · อัปเดต <strong>{result.updated}</strong> · ข้าม (ถูกระงับ) <strong>{result.skipped ?? 0}</strong> · ผิดพลาด <strong>{result.errors.length}</strong>
           </p>
           {result.errors.length > 0 && (
             <ul style={{ color: 'var(--bad)', fontSize: 13 }}>

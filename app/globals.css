@@ -123,6 +123,12 @@ p { margin: 8px 0; }
 .badge-issue { display: inline-block; font-size: 11px; border-radius: 6px; padding: 2px 7px; margin-right: 4px; background: #f1f3f5; color: var(--text-muted); }
 .badge-issue--dup { background: #fff7ed; color: #b45309; }
 
+.badge-warn { display: inline-block; font-size: 11px; border-radius: 6px; padding: 2px 7px; margin-right: 4px; background: #fef3c7; color: #92400e; }
+.status-pill { display: inline-block; font-size: 11px; border-radius: 999px; padding: 2px 9px; }
+.status-pill--ok { background: var(--success-bg); color: var(--success-text); }
+.status-pill--warn { background: #fff7ed; color: #b45309; }
+.status-pill--bad { background: #fef2f2; color: #b91c1c; }
+
 .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 18, 22, .45); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 100; }
 .modal { background: var(--surface); border-radius: var(--radius-card); padding: 20px 22px; width: 100%; max-width: 520px; max-height: 88vh; overflow-y: auto; }
 .modal-title { font-size: 16px; font-weight: 500; margin: 0 0 14px; }

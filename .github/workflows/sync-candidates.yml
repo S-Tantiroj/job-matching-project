@@ -1,0 +1,32 @@
+name: sync-candidates
+
+on:
+  schedule:
+    # GitHub ใช้ UTC ไม่ใช่เวลาไทย — 19:00 UTC = 02:00 ของวันถัดไปตามเวลากรุงเทพ
+    # อย่าเปลี่ยนเป็น '0 2 * * *' เพราะนั่นคือ 09:00 เช้าตามเวลาไทย
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-candidates
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/sync-phantombuster.ts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PHANTOMBUSTER_API_KEY: ${{ secrets.PHANTOMBUSTER_API_KEY }}
+          PHANTOMBUSTER_AGENT_ID: ${{ secrets.PHANTOMBUSTER_AGENT_ID }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}

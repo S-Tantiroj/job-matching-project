@@ -1,7 +1,9 @@
 import { getServerClient } from '@/lib/supabase/server'
+import { getSession, hasRole } from '@/lib/auth/session'
 import Timeline from '@/components/Timeline'
 import AnalyzePanel from '@/components/AnalyzePanel'
 import AddToShortlist from '@/components/AddToShortlist'
+import SuppressButton from '@/components/SuppressButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +13,9 @@ const initials = (name: string) =>
 export default async function CandidatePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const db = getServerClient()
+
+  const session = await getSession()
+  const canSuppress = !!session && hasRole(session.role, 'data_manager')
 
   const { data: c } = await db
     .from('candidates')
@@ -51,6 +56,18 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
 
       <AnalyzePanel candidateId={id} />
       <AddToShortlist candidateId={id} />
+
+      {canSuppress && (
+        <>
+          <div className="section-header"><h2>จัดการข้อมูล</h2></div>
+          <div className="card">
+            <p className="faint" style={{ fontSize: 13, marginTop: 0 }}>
+              ใช้เมื่อเจ้าของข้อมูลขอให้ลบ ระบบจะจำไว้และไม่นำเข้าคนนี้อีก
+            </p>
+            <SuppressButton candidateId={id} fullName={(c as any).full_name} />
+          </div>
+        </>
+      )}
     </main>
   )
 }

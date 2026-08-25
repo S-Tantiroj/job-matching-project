@@ -34,15 +34,18 @@ export async function POST(req: NextRequest) {
 
   let imported = 0
   let updated = 0
+  let skipped = 0
   const errors: string[] = []
   for (const input of inputs) {
     try {
       const r = await upsertCandidate(input, userId)
-      r.updated ? updated++ : imported++
+      if (r.suppressed) skipped++
+      else if (r.updated) updated++
+      else imported++
     } catch (e: any) {
       errors.push(`${input.full_name}: ${e?.message ?? e}`)
     }
   }
 
-  return NextResponse.json({ imported, updated, errors })
+  return NextResponse.json({ imported, updated, skipped, errors })
 }

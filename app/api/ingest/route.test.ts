@@ -12,7 +12,7 @@ vi.mock('@/lib/ingest/linkedin', () => ({
     { full_name: 'L2', source: 'scraper' },
   ],
 }))
-const upsertMock = vi.fn(async () => ({ id: 'x', updated: false }))
+const upsertMock = vi.fn(async () => ({ id: 'x', updated: false, suppressed: false }))
 vi.mock('@/lib/ingest/upsert', () => ({ upsertCandidate: (...a: any[]) => upsertMock(...a) }))
 vi.mock('@/lib/gemini/parse', () => ({
   parseResume: async () => ({ full_name: 'R', source: 'upload' }),

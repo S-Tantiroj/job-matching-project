@@ -173,6 +173,29 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-20-self-assessment*`
   control, not a second layer. Id-bearing routes answer **404, not 403**, to a
   non-owner so the response cannot confirm an id exists.
 
+### Phase 8 — v4 Scraper automation
+Spec/plan: `docs/superpowers/{specs,plans}/2026-08-24-scraper-automation*`
+- [x] Migration 013 — `ingest_runs` (ตามรอยที่มา, หลักฐาน PDPA), `pending_candidates`
+      (คิวรอตรวจ), `suppressed_profiles` (ระงับตามคำขอ) + `candidates.ingest_run_id`
+      และ `candidates.embed_hash`
+- [x] **`embed_hash` คือสิ่งที่ทำให้ฟีเจอร์นี้อยู่รอด** — `upsertCandidate` เรียก `embedText`
+      ก่อนเช็คว่าแถวมีอยู่แล้วไหม การรันทุกคืนกับ search เดิมจึงจะ re-embed ทุกคนทุกครั้ง
+      สคริปต์เทียบ hash ก่อนเรียก Gemini จึงข้ามแถวที่ไม่เปลี่ยนได้ และ **resume ได้เอง
+      โดยไม่ต้องมีตาราง checkpoint** — สคริปต์จึง idempotent รันซ้ำได้เสมอ
+- [x] **เช็ครายชื่อระงับอยู่ใน `upsertCandidate` ก่อน embed** ไม่ใช่ในสคริปต์ — ถ้าเช็คแค่ใน
+      สคริปต์ การวาง CSV ด้วยมือที่ `/import` จะพาคนที่ขอให้ลบกลับเข้ามา
+- [x] การลบตามคำขอเป็นการกระทำเดียว (บันทึกรายชื่อระงับ **ก่อน** ลบ) — ถ้าลบก่อนแล้วบันทึกล้ม
+      จะได้สถานะที่แย่ที่สุดคือข้อมูลหายแต่คืนถัดไปกลับมาใหม่
+- [x] `classifyRow` คัดกรองสี่เกณฑ์ (headline, experience, linkedin_url, education)
+      ครบเข้า `candidates` เลย ไม่ครบเข้าคิว — อนุมัติทีละคน ปฏิเสธเป็นกลุ่มได้
+- [x] รันบน GitHub Actions ไม่ใช่ Vercel Cron เพราะ 500+ แถว × 1 embedding เกินเพดานเวลา
+      ของ serverless แน่นอน — สคริปต์เรียก `upsertCandidate` ตรงๆ ไม่ผ่าน HTTP
+- **`upsertCandidate` คืน `{ id, updated, suppressed }`** — `id` เป็น null เมื่อ suppressed
+  ผู้เรียกต้องเช็ค `suppressed` ก่อนใช้ `id`
+- cron ของ GitHub เป็น **UTC** — `0 19 * * *` = 02:00 เวลาไทยของวันถัดไป
+- ยังไม่ได้ยืนยัน `lib/ingest/phantombuster.ts` กับ API จริง (ยังไม่มีบัญชี) แยกไฟล์ไว้
+  เพื่อให้แก้จุดเดียวเมื่อพบรูปร่างจริง
+
 ### Not done / deliberately deferred
 - Google sign-in — deferred from v2. Risk: an existing email/password user
   signing in with Google may get a NEW auth user (and so a new profile, role
