@@ -4,6 +4,8 @@ import { getServerClient } from '@/lib/supabase/server'
 import { parsePage, parseSort, parseAsc, PAGE_SIZE } from '@/lib/candidates/listParams'
 import { missingFields, buildIssuesOrFilter } from '@/lib/candidates/quality'
 import CandidatesTable, { type CandidateRow } from '@/components/CandidatesTable'
+import ActivityList from '@/components/ActivityList'
+import { listAllActivity } from '@/lib/activity/read'
 
 export const dynamic = 'force-dynamic'
 
@@ -84,6 +86,7 @@ export default async function CandidatesListPage({
   }))
 
   const total = count ?? 0
+  const activity = await listAllActivity(40)
 
   return (
     <main>
@@ -98,6 +101,15 @@ export default async function CandidatesListPage({
         q={q}
         issues={issues}
       />
+
+      <div className="section-header">
+        <h2>บันทึกกิจกรรม</h2>
+      </div>
+      <p className="faint" style={{ marginTop: 0, fontSize: 13 }}>
+        การนำเข้า ลบ ระงับ อนุมัติ และแก้ไขข้อมูลของทุกคนในระบบ — บันทึกนี้อยู่รอด
+        แม้ผู้สมัครที่อ้างถึงจะถูกลบไปแล้ว
+      </p>
+      <ActivityList rows={activity} showActor empty="ยังไม่มีการเปลี่ยนแปลงข้อมูล" />
     </main>
   )
 }

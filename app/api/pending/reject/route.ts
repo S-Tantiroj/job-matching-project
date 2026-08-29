@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, hasRole } from '@/lib/auth/session'
 import { getServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/activity/log'
 
 // POST /api/pending/reject  body: { ids: string[] }
 // ปฏิเสธเป็นกลุ่มได้เพราะการปฏิเสธไม่เพิ่มข้อมูลเข้าระบบ จึงปลอดภัย
@@ -21,7 +22,13 @@ export async function POST(req: NextRequest) {
   }
   if (!ids.length) return NextResponse.json({ error: 'ไม่ได้เลือกรายการ' }, { status: 400 })
 
-  const { error } = await getServerClient()
+  const db = getServerClient()
+
+  // อ่านชื่อก่อนอัปเดต เพื่อให้บันทึกอ่านรู้เรื่องโดยไม่ต้อง join กลับ
+  const { data: rows } = await db.from('pending_candidates').select('full_name').in('id', ids)
+  const names = (rows ?? []).map((r: any) => r.full_name).filter(Boolean)
+
+  const { error } = await db
     .from('pending_candidates')
     .update({ status: 'rejected', reviewed_by: session.userId, reviewed_at: new Date().toISOString() })
     .in('id', ids)
@@ -30,5 +37,18 @@ export async function POST(req: NextRequest) {
     console.error('reject failed:', error.message)
     return NextResponse.json({ error: 'เกิดข้อผิดพลาด กรุณาลองใหม่' }, { status: 500 })
   }
+
+  await logActivity({
+    actorId: session.userId,
+    action: 'reject',
+    entityType: 'candidate',
+    summary:
+      names.length === 1
+        ? names[0]
+        : `${names.slice(0, 3).join(', ')}${names.length > 3 ? ` และอีก ${names.length - 3} คน` : ''}`,
+    count: ids.length,
+    metadata: { names },
+  })
+
   return NextResponse.json({ ok: true, rejected: ids.length })
 }

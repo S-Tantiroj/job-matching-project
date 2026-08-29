@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:all": "npm run test && npm run test:integration"
   },
   "dependencies": {
     "@google/genai": "^1.9.0",

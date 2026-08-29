@@ -56,6 +56,7 @@ export async function upsertCandidate(
   const row = {
     full_name: input.full_name,
     headline: input.headline ?? null,
+    industry: input.industry ?? null,
     location: input.location ?? null,
     summary: input.summary ?? null,
     source: input.source,

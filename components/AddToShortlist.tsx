@@ -1,8 +1,15 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { getBrowserClient } from '@/lib/supabase/client'
+import { track } from '@/lib/activity/client'
 
-export default function AddToShortlist({ candidateId }: { candidateId: string }) {
+export default function AddToShortlist({
+  candidateId,
+  candidateName,
+}: {
+  candidateId: string
+  candidateName?: string
+}) {
   const db = getBrowserClient()
   const [lists, setLists] = useState<{ id: string; name: string }[]>([])
   const [selected, setSelected] = useState('')
@@ -30,6 +37,7 @@ export default function AddToShortlist({ candidateId }: { candidateId: string })
         .single()
       if (error) return setMsg(error.message)
       listId = (data as any).id
+      track('shortlist_create', newName.trim(), listId)
       setNewName('')
       await load()
     }
@@ -37,6 +45,10 @@ export default function AddToShortlist({ candidateId }: { candidateId: string })
     const { error } = await db
       .from('shortlist_candidates')
       .upsert({ shortlist_id: listId, candidate_id: candidateId })
+    if (!error) {
+      const listName = lists.find((l) => l.id === listId)?.name ?? 'shortlist'
+      track('shortlist_add', `${candidateName ?? 'ผู้สมัคร'} → ${listName}`, listId)
+    }
     setMsg(error ? error.message : 'เพิ่มเข้า shortlist แล้ว')
   }
 

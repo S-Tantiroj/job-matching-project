@@ -1,15 +1,16 @@
 import { defineConfig } from 'vitest/config'
 
+// ชุด unit — ตรรกะล้วน ไม่แตะเครือข่าย
+//
+// ต้องเขียวเสมอ ทุกครั้ง ไม่ว่า Gemini หรือ Supabase จะเป็นอย่างไร ถ้าชุดนี้แดง
+// แปลว่าโค้ดผิดจริง ซึ่งเป็นเหตุผลเดียวที่ชุดเทสต์ควรแดง
+//
+// เทสต์ที่ต้องใช้บริการจริงอยู่ในไฟล์ *.int.test.ts และมี config แยก
 export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    // Integration tests hit real Supabase/Gemini over the network. The default
-    // 5s is not enough for the first call in a run, which pays DNS + TLS setup
-    // and, on a paused free-tier project, the instance wake-up. Unit tests are
-    // unaffected — a passing test never waits for its timeout.
-    testTimeout: 20000,
-    hookTimeout: 20000,
+    exclude: ['**/node_modules/**', '**/.next/**', '**/*.int.test.ts'],
   },
   resolve: {
     alias: { '@': __dirname },

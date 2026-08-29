@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { getServerClient } from '@/lib/supabase/server'
 import { getSession } from '@/lib/auth/session'
+import ActivityList from '@/components/ActivityList'
+import { listMyActivity, listRecentlyViewed } from '@/lib/activity/read'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,17 +14,29 @@ export default async function Dashboard() {
   const session = await getSession()
 
   const { count } = await db.from('candidates').select('id', { count: 'exact', head: true })
-  const { count: scraped } = await db
+
+  // ยอดเปลี่ยนแปลงสุทธิใน 30 วัน = เข้ามาใหม่ − ถูกลบออก
+  //
+  // ต้องเป็นสุทธิ ไม่ใช่ "จำนวนแถวที่ถูกแตะ" เพราะจำนวนนับติดลบไม่ได้ เครื่องหมาย
+  // บวก/ลบจึงไม่มีความหมาย ฝั่งที่ถูกลบอ่านจาก activity_log ได้เพราะแถวใน
+  // candidates หายไปแล้ว — ไม่มีที่อื่นให้นับ
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { count: added } = await db
     .from('candidates')
     .select('id', { count: 'exact', head: true })
-    .eq('source', 'scraper')
-  const { count: jobCount } = await db.from('jobs').select('id', { count: 'exact', head: true })
+    .gte('created_at', since)
 
-  const { data: recent } = await db
-    .from('candidates')
-    .select('id, full_name, headline, source')
-    .order('created_at', { ascending: false })
-    .limit(8)
+  const { data: removals } = await db
+    .from('activity_log')
+    .select('count')
+    .in('action', ['delete', 'suppress'])
+    .gte('created_at', since)
+  const removed = (removals ?? []).reduce((n, r: any) => n + (r.count ?? 1), 0)
+
+  const net = (added ?? 0) - removed
+
+  const { count: jobCount } = await db.from('jobs').select('id', { count: 'exact', head: true })
 
   const { data: shortlists } = session
     ? await db
@@ -31,6 +45,9 @@ export default async function Dashboard() {
         .eq('owner_id', session.userId)
         .order('created_at', { ascending: false })
     : { data: [] }
+
+  const myActivity = session ? await listMyActivity(session.userId, 12) : []
+  const viewed = session ? await listRecentlyViewed(session.userId, 6) : []
 
   return (
     <main>
@@ -42,8 +59,18 @@ export default async function Dashboard() {
           <div className="metric-value">{count ?? 0}</div>
         </div>
         <div className="metric">
-          <div className="metric-label">จาก LinkedIn</div>
-          <div className="metric-value">{scraped ?? 0}</div>
+          <div className="metric-label">เปลี่ยนแปลงใน 30 วัน</div>
+          <div
+            className={`metric-value ${net > 0 ? 'metric-value--up' : net < 0 ? 'metric-value--down' : ''}`}
+          >
+            {/* ใช้ − (U+2212) ไม่ใช่ hyphen เพราะความสูงและความกว้างเท่ากับ + พอดี
+                ทำให้ตัวเลขสองแบบไม่กระตุกเมื่อสลับเครื่องหมาย */}
+            {net > 0 ? '+' : net < 0 ? '−' : ''}
+            {Math.abs(net)}
+          </div>
+          <div className="metric-note">
+            เข้ามา {added ?? 0} · ลบออก {removed}
+          </div>
         </div>
         <div className="metric">
           <div className="metric-label">งานที่เปิด</div>
@@ -76,23 +103,32 @@ export default async function Dashboard() {
         </div>
       )}
 
+      {viewed.length > 0 && (
+        <>
+          <div className="section-header">
+            <h2>เพิ่งดูล่าสุด</h2>
+          </div>
+          <div className="list">
+            {viewed.map((c) => (
+              <Link key={c.id} href={`/candidates/${c.id}`} className="list-row" style={{ color: 'inherit' }}>
+                <span className="avatar">{initials(c.full_name)}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 500 }}>{c.full_name}</div>
+                  <div className="muted" style={{ fontSize: 12 }}>{c.headline ?? '—'}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="section-header">
-        <h2>ผู้สมัครล่าสุด</h2>
+        <h2>กิจกรรมของคุณ</h2>
       </div>
-      <div className="list">
-        {(recent ?? []).map((c: any) => (
-          <Link key={c.id} href={`/candidates/${c.id}`} className="list-row" style={{ color: 'inherit' }}>
-            <span className="avatar">{initials(c.full_name)}</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 500 }}>{c.full_name}</div>
-              <div className="muted" style={{ fontSize: 12 }}>{c.headline}</div>
-            </div>
-            <span className={`tag ${c.source === 'scraper' ? 'tag-accent' : ''}`}>
-              {c.source === 'scraper' ? 'linkedin' : c.source}
-            </span>
-          </Link>
-        ))}
-      </div>
+      <ActivityList
+        rows={myActivity}
+        empty="ยังไม่มีกิจกรรมของคุณ — ลองค้นหาผู้สมัครแล้วเพิ่มเข้า shortlist ดู"
+      />
     </main>
   )
 }

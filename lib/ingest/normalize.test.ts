@@ -12,3 +12,10 @@ test('buildEmbedText concatenates key fields', () => {
   expect(t).toContain('Python')
   expect(t).toContain('MIT')
 })
+
+test('buildEmbedText includes industry - the counterpart of jobs.category', () => {
+  const base = { full_name: 'A', headline: 'Managing Director', source: 'scraper' as const }
+  expect(buildEmbedText({ ...base, industry: 'Oil & Gas' })).toContain('Oil & Gas')
+  // absent industry must not leave a blank line that shifts the text
+  expect(buildEmbedText(base).split('\n')).toEqual(['A', 'Managing Director'])
+})

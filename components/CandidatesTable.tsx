@@ -3,7 +3,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MISSING_LABELS, type MissingField } from '@/lib/candidates/quality'
-import EditCandidateModal from './EditCandidateModal'
+import { isReimportable } from '@/lib/candidates/remove'
+import DeleteCandidatesDialog, { type DeleteTarget } from './DeleteCandidatesDialog'
 
 export type CandidateRow = {
   id: string
@@ -51,7 +52,38 @@ export default function CandidatesTable({
 }) {
   const router = useRouter()
   const params = useSearchParams()
-  const [editing, setEditing] = useState<CandidateRow | null>(null)
+  const [deleting, setDeleting] = useState<DeleteTarget[] | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [notice, setNotice] = useState('')
+
+  const toTarget = (r: CandidateRow): DeleteTarget => ({
+    id: r.id,
+    full_name: r.full_name,
+    reimportable: isReimportable(r),
+  })
+
+  const toggle = (id: string) => {
+    const next = new Set(selected)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setSelected(next)
+  }
+
+  // เลือกทั้งหมด = เฉพาะแถวในหน้านี้ ไม่ใช่ทุกแถวที่ค้นเจอ — การลบสิ่งที่มองไม่เห็น
+  // อยู่ตรงหน้าเป็นวิธีที่ดีที่สุดที่จะทำให้เกิดอุบัติเหตุ
+  const pageIds = rows.map((r) => r.id)
+  const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
+  const toggleAll = () => {
+    const next = new Set(selected)
+    allOnPage ? pageIds.forEach((id) => next.delete(id)) : pageIds.forEach((id) => next.add(id))
+    setSelected(next)
+  }
+
+  const afterDelete = (msg: string) => {
+    setDeleting(null)
+    setSelected(new Set())
+    setNotice(msg)
+    router.refresh()
+  }
 
   const go = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString())
@@ -91,10 +123,35 @@ export default function CandidatesTable({
         <span className="faint" style={{ fontSize: 13, marginLeft: 'auto' }}>ทั้งหมด {total} คน</span>
       </div>
 
+      {selected.size > 0 && (
+        <div className="row" style={{ margin: '0 0 12px', flexWrap: 'wrap' }}>
+          <button
+            className="btn"
+            style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}
+            onClick={() =>
+              setDeleting(rows.filter((r) => selected.has(r.id)).map(toTarget))
+            }
+          >
+            ลบที่เลือก ({selected.size})
+          </button>
+          <button className="btn btn-ghost" onClick={() => setSelected(new Set())}>ยกเลิกการเลือก</button>
+        </div>
+      )}
+
+      {notice && <p style={{ color: 'var(--ok)' }}>{notice}</p>}
+
       <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
+              <th style={{ width: 32 }}>
+                <input
+                  type="checkbox"
+                  checked={allOnPage}
+                  onChange={toggleAll}
+                  aria-label="เลือกทั้งหมดในหน้านี้"
+                />
+              </th>
               {COLUMNS.map((c) => (
                 <th key={c.key}>
                   {c.sortable ? (
@@ -112,6 +169,14 @@ export default function CandidatesTable({
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(r.id)}
+                    onChange={() => toggle(r.id)}
+                    aria-label={`เลือก ${r.full_name}`}
+                  />
+                </td>
                 <td><Link href={`/candidates/${r.id}`} style={{ fontWeight: 500 }}>{r.full_name}</Link></td>
                 <td className="muted">{r.headline ?? '—'}</td>
                 <td className="muted">{r.location ?? '—'}</td>
@@ -126,7 +191,13 @@ export default function CandidatesTable({
                   {!r.duplicate && r.missing.length === 0 && <span className="faint">—</span>}
                 </td>
                 <td>
-                  <button className="btn btn-ghost" onClick={() => setEditing(r)}>แก้ไข</button>
+                  <button
+                    className="btn btn-ghost"
+                    style={{ color: 'var(--bad)' }}
+                    onClick={() => setDeleting([toTarget(r)])}
+                  >
+                    ลบ
+                  </button>
                 </td>
               </tr>
             ))}
@@ -142,7 +213,13 @@ export default function CandidatesTable({
         <button className="btn" disabled={page >= totalPages} onClick={() => go({ page: String(page + 1) })}>ถัดไป</button>
       </div>
 
-      {editing && <EditCandidateModal row={editing} onClose={() => setEditing(null)} />}
+      {deleting && (
+        <DeleteCandidatesDialog
+          targets={deleting}
+          onClose={() => setDeleting(null)}
+          onDone={afterDelete}
+        />
+      )}
     </div>
   )
 }

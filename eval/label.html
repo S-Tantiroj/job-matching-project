@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ติดป้ายเฉลย — ผู้สมัคร × งาน</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --line: #262b35; --text: #e6e8ee;
+    --muted: #98a0b0; --faint: #6b7382; --accent: #6ea8fe;
+    --ok: #4bb96f; --warn: #d9a441;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--muted); } .faint { color: var(--faint); font-size: 13px; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; padding: 7px 13px;
+    background: #202632; color: var(--text); border: 1px solid var(--line); }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  .primary { background: var(--accent); color: #0f1115; border-color: var(--accent); font-weight: 600; }
+  kbd { background: #202632; border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+  code { background: #202632; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+
+  header { position: sticky; top: 0; z-index: 5; background: rgba(15,17,21,.97);
+    border-bottom: 1px solid var(--line); padding: 10px 20px; backdrop-filter: blur(8px); }
+  .bar { height: 5px; background: #202632; border-radius: 99px; overflow: hidden; flex: 1; min-width: 120px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .18s; }
+  .ready { background: var(--ok); color: #0f1115; border-radius: 99px;
+    padding: 3px 11px; font-size: 12.5px; font-weight: 600; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 18px 20px 90px; }
+
+  .jobbar { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 14px; margin-bottom: 14px; }
+  .jobbar h2 { margin: 0; font-size: 15px; }
+  .jobdet { margin-top: 10px; font-size: 13.5px; color: var(--muted); display: none; }
+  .jobdet.open { display: block; }
+  .chip { display: inline-block; background: #202632; border: 1px solid var(--line);
+    border-radius: 99px; padding: 2px 9px; font-size: 12px; margin: 3px 4px 0 0; }
+  .link { background: none; border: none; color: var(--accent); padding: 0; font-size: 13px; }
+
+  .cand { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; }
+  .cand h3 { margin: 0; font-size: 17px; }
+  .sec { margin-top: 10px; font-size: 13.5px; }
+  .sec b { color: var(--muted); font-weight: 600; font-size: 12.5px;
+    text-transform: uppercase; letter-spacing: .04em; }
+  ul { margin: 3px 0 0; padding-left: 17px; }
+  li { margin: 1px 0; }
+  .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden; }
+
+  .checks { margin-top: 16px; display: flex; flex-direction: column; gap: 7px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer;
+    padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; }
+  .check:hover { border-color: var(--accent); }
+  .check.on { border-color: var(--ok); background: rgba(75,185,111,.10); }
+  .check.must { border-left: 3px solid var(--warn); }
+  .check input { margin: 4px 0 0; flex: none; }
+  .ctext { flex: 1; }
+  .cshort { font-weight: 600; font-size: 14px; }
+  .cfull { color: var(--faint); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+  .tag { background: var(--warn); color: #0f1115; border-radius: 99px;
+    padding: 0 7px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+
+  footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+    background: rgba(15,17,21,.97); border-top: 1px solid var(--line);
+    padding: 10px 20px; backdrop-filter: blur(8px); }
+  .fwrap { max-width: 720px; margin: 0 auto; justify-content: space-between; }
+  .empty { padding: 50px 20px; text-align: center; }
+  .skipped { color: var(--warn); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <div class="bar"><i id="bar"></i></div>
+    <span class="faint" id="count">—</span>
+    <span id="ready" class="ready" style="display:none">ครบแล้ว วัดผลได้</span>
+    <button id="export" class="primary">ดาวน์โหลด</button>
+    <button id="reset">ล้าง</button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer>
+  <div class="row fwrap">
+    <button id="prev">← ก่อนหน้า</button>
+    <span class="faint" id="pos"></span>
+    <button id="next" class="primary">ตัดสินแล้ว · ถัดไป <kbd>space</kbd></button>
+  </div>
+</footer>
+
+<script src="pool.js"></script>
+<script src="rubric.js"></script>
+<script>
+(function () {
+  var app = document.getElementById('app')
+  var pool = window.__POOL__
+  var rubrics = window.__RUBRIC__
+
+  function bail(msg, hint) {
+    document.querySelector('footer').style.display = 'none'
+    app.innerHTML = '<div class="empty"><p>' + msg + '</p><p class="faint">' + hint + '</p></div>'
+  }
+  if (!pool || !pool.length) return bail('ยังไม่มีข้อมูล',
+    'รัน <code>npx tsx scripts/make-eval-set.ts</code> ก่อน แล้วเปิดหน้านี้ใหม่')
+  if (!rubrics) return bail('ยังไม่มีเกณฑ์การตรวจ',
+    'รัน <code>npx tsx scripts/make-eval-set.ts</code> เพื่อสร้าง eval/rubric.js')
+
+  function rubricFor(jobId) {
+    return rubrics[jobId] || { criteria: [{ id: 'fit', short: 'เหมาะกับงานนี้', label: 'เหมาะกับงานนี้' }] }
+  }
+
+  var KEY = 'skouth-eval-labels'
+  var labels = {}
+  try { labels = JSON.parse(localStorage.getItem(KEY) || '{}') } catch (e) { labels = {} }
+  Object.keys(labels).forEach(function (k) {
+    if (typeof labels[k] === 'number') labels[k] = { checks: {}, done: true, legacyGrade: labels[k] }
+  })
+
+  // ลำดับมาจาก pool.js ซึ่งเรียงคู่ที่สองสูตรเห็นไม่ตรงกันไว้ก่อน
+  var flat = []
+  var needed = []
+  var jobOf = {}
+  pool.forEach(function (blk) {
+    jobOf[blk.job.id] = blk.job
+    blk.candidates.forEach(function (c) {
+      flat.push({ jobId: blk.job.id, cand: c })
+      if (c.tier === 1) needed.push(blk.job.id + '|' + c.id)
+    })
+  })
+  var total = flat.length
+  var cursor = 0
+
+  var keyAt = function (i) { return flat[i].jobId + '|' + flat[i].cand.id }
+  var isDone = function (k) { return !!(labels[k] && labels[k].done) }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(labels)) } catch (e) {} }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
+    })
+  }
+
+  // เริ่มที่คนแรกที่ยังไม่ได้ตัดสิน เปิดหน้ามาแล้วทำต่อได้ทันที
+  for (var i = 0; i < total; i++) { if (!isDone(keyAt(i))) { cursor = i; break } }
+
+  function progress() {
+    var doneNeed = 0
+    needed.forEach(function (k) { if (isDone(k)) doneNeed++ })
+    var n = needed.length
+    document.getElementById('bar').style.width = (n ? (doneNeed / n) * 100 : 0) + '%'
+    document.getElementById('count').textContent = 'จำเป็น ' + doneNeed + '/' + n
+    document.getElementById('ready').style.display = (n && doneNeed >= n) ? '' : 'none'
+    document.getElementById('pos').textContent = (cursor + 1) + ' / ' + total +
+      (flat[cursor].cand.tier === 2 ? ' · ส่วนเสริม' : '')
+    document.getElementById('prev').disabled = cursor === 0
+  }
+
+  function render() {
+    var it = flat[cursor]
+    var j = jobOf[it.jobId]
+    var c = it.cand
+    var k = keyAt(cursor)
+    var rec = labels[k] || { checks: {} }
+    var rub = rubricFor(it.jobId)
+
+    var meta = []
+    if (j.category) meta.push(esc(j.category))
+    if (j.location) meta.push(esc(j.location))
+    if (j.min_experience_years != null) meta.push('อย่างน้อย ' + j.min_experience_years + ' ปี')
+
+    var html = '<div class="jobbar"><div class="row" style="justify-content:space-between">' +
+      '<h2>ตำแหน่ง: ' + esc(j.title) + (j.company ? ' <span class="muted">· ' + esc(j.company) + '</span>' : '') + '</h2>' +
+      '<button class="link" id="tog">รายละเอียดงาน</button></div>' +
+      (meta.length ? '<div class="faint">' + meta.join(' · ') + '</div>' : '') +
+      '<div class="jobdet" id="jd">' + esc(j.description || '') +
+      (j.required_skills && j.required_skills.length
+        ? '<div>' + j.required_skills.map(function (s) { return '<span class="chip">' + esc(s) + '</span>' }).join('') + '</div>'
+        : '') + '</div></div>'
+
+    html += '<div class="cand"><h3>' + esc(c.full_name) + '</h3>'
+    var sub = []
+    if (c.headline) sub.push(esc(c.headline))
+    if (c.industry) sub.push(esc(c.industry))
+    if (c.location) sub.push(esc(c.location))
+    if (sub.length) html += '<div class="muted" style="font-size:13.5px">' + sub.join(' · ') + '</div>'
+
+    if (c.summary) html += '<div class="sec clamp" id="sum" title="คลิกเพื่อดูเต็ม">' + esc(c.summary) + '</div>'
+
+    if (c.experience && c.experience.length) {
+      html += '<div class="sec"><b>ประสบการณ์</b><ul>' + c.experience.map(function (e) {
+        return '<li>' + esc([e.title, e.company].filter(Boolean).join(' — ')) +
+          (e.years ? ' <span class="faint">' + esc(e.years) + '</span>' : '') + '</li>'
+      }).join('') + '</ul></div>'
+    }
+    if (c.education && c.education.length) {
+      html += '<div class="sec"><b>การศึกษา</b><ul>' + c.education.map(function (e) {
+        var line = [e.degree, e.field_of_study, e.institution, e.country].filter(Boolean).join(', ')
+        return '<li>' + esc(line) + (e.years ? ' <span class="faint">' + esc(e.years) + '</span>' : '') + '</li>'
+      }).join('') + '</ul></div>'
+    }
+    if (c.skills && c.skills.length) {
+      html += '<div class="sec">' + c.skills.map(function (s) {
+        return '<span class="chip">' + esc(s) + '</span>'
+      }).join('') + '</div>'
+    }
+
+    html += '<div class="checks">' + rub.criteria.map(function (cr, idx) {
+      var on = !!rec.checks[cr.id]
+      return '<label class="check' + (on ? ' on' : '') + (cr.must ? ' must' : '') + '">' +
+        '<input type="checkbox" data-c="' + esc(cr.id) + '"' + (on ? ' checked' : '') + '>' +
+        '<span class="ctext"><span class="cshort"><kbd>' + (idx + 1) + '</kbd> ' + esc(cr.short) + '</span>' +
+        (cr.must ? ' <span class="tag">ข้อบังคับ</span>' : '') +
+        '<span class="cfull">' + esc(cr.label) + '</span></span></label>'
+    }).join('') + '</div>'
+
+    html += '</div>'
+    app.innerHTML = html
+    window.scrollTo(0, 0)
+    progress()
+
+    document.getElementById('tog').addEventListener('click', function () {
+      document.getElementById('jd').classList.toggle('open')
+    })
+    var sum = document.getElementById('sum')
+    if (sum) sum.addEventListener('click', function () { sum.classList.toggle('clamp') })
+  }
+
+  function toggleCheck(critId) {
+    var k = keyAt(cursor)
+    var rec = labels[k] || { checks: {} }
+    rec.checks[critId] = !rec.checks[critId]
+    labels[k] = rec
+    save()
+    var box = app.querySelector('input[data-c="' + critId + '"]')
+    if (box) {
+      box.checked = !!rec.checks[critId]
+      var lab = box.parentNode
+      lab.className = 'check' + (rec.checks[critId] ? ' on' : '') +
+        (lab.className.indexOf('must') >= 0 ? ' must' : '')
+    }
+  }
+
+  function advance() {
+    var k = keyAt(cursor)
+    labels[k] = labels[k] || { checks: {} }
+    labels[k].done = true
+    save()
+    if (cursor < total - 1) cursor++
+    render()
+  }
+
+  app.addEventListener('change', function (e) {
+    if (e.target && e.target.type === 'checkbox' && e.target.dataset.c) toggleCheck(e.target.dataset.c)
+  })
+
+  document.getElementById('next').addEventListener('click', advance)
+  document.getElementById('prev').addEventListener('click', function () {
+    if (cursor > 0) { cursor--; render() }
+  })
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return
+    if (e.key === ' ') { e.preventDefault(); advance(); return }
+    if (e.key === 'ArrowLeft') { if (cursor > 0) { cursor--; render() } return }
+    if (e.key === 'ArrowRight') { if (cursor < total - 1) { cursor++; render() } return }
+    var n = Number(e.key)
+    if (!n || n < 1 || n > 9) return
+    var cr = rubricFor(flat[cursor].jobId).criteria[n - 1]
+    if (!cr) return
+    e.preventDefault()
+    toggleCheck(cr.id)
+  })
+
+  document.getElementById('export').addEventListener('click', function () {
+    var doneNeed = 0
+    needed.forEach(function (k) { if (isDone(k)) doneNeed++ })
+    var done = Object.keys(labels).filter(isDone).length
+    if (doneNeed < needed.length &&
+        !confirm('รายการจำเป็นยังไม่ครบ (' + doneNeed + '/' + needed.length + ')\n' +
+                 'ผลจะคำนวณจากเท่าที่ตัดสินไว้ ดาวน์โหลดเลยไหม')) return
+    var blob = new Blob([JSON.stringify(
+      { labels: labels, total: total, labelled: done, needed: needed.length, neededDone: doneNeed }, null, 1)],
+      { type: 'application/json' })
+    var a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = 'labels.json'
+    a.click()
+    URL.revokeObjectURL(a.href)
+  })
+
+  // ใช้เมื่อเกณฑ์เปลี่ยน — ป้ายเก่าถูกตัดสินคนละมาตรฐาน เก็บปนกันจะได้เฉลย
+  // ที่ขัดกันเองโดยไม่มีใครเห็น
+  document.getElementById('reset').addEventListener('click', function () {
+    if (!confirm('ลบป้ายที่บันทึกไว้ทั้งหมดในเบราว์เซอร์นี้\nใช้เมื่อเกณฑ์เปลี่ยนไปแล้ว ยืนยันไหม')) return
+    labels = {}
+    try { localStorage.removeItem(KEY) } catch (e) {}
+    cursor = 0
+    render()
+  })
+
+  render()
+})()
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import { parseResume } from '@/lib/gemini/parse'
 import { upsertCandidate } from '@/lib/ingest/upsert'
 import { getSession, hasRole } from '@/lib/auth/session'
 import type { CandidateInput } from '@/lib/ingest/normalize'
+import { logActivity } from '@/lib/activity/log'
 
 // POST /api/ingest
 //   { type: 'csv',      csv: string, mapping: Record<string,string> }
@@ -46,6 +47,15 @@ export async function POST(req: NextRequest) {
       errors.push(`${input.full_name}: ${e?.message ?? e}`)
     }
   }
+
+  await logActivity({
+    actorId: userId,
+    action: 'ingest',
+    entityType: 'candidate',
+    summary: `นำเข้าด้วยตนเอง (${body.type}) — เพิ่ม ${imported} · อัปเดต ${updated}`,
+    count: imported + updated,
+    metadata: { type: body.type, imported, updated, skipped, errors: errors.length },
+  })
 
   return NextResponse.json({ imported, updated, skipped, errors })
 }

@@ -1,4 +1,5 @@
 import { getGemini } from '@/lib/gemini/client'
+import { withTimeout } from '@/lib/gemini/withTimeout'
 
 export type ChipFilters = {
   skills?: string[]
@@ -33,23 +34,31 @@ Rules:
 
 Request: ${nl}`
 
-  const res = await getGemini().models.generateContent({
-    model: 'gemini-flash-latest',
-    contents: prompt,
-    // Force strict JSON output (no markdown fences / prose) so complex queries
-    // parse reliably instead of falling back to a plain semantic search.
-    config: { responseMimeType: 'application/json' },
-  })
-  // The LLM can occasionally return malformed or truncated JSON (long/complex
-  // queries). Never throw — fall back to a plain semantic search on the raw text.
+  // ห้ามโยน error ออกจากฟังก์ชันนี้เด็ดขาด
+  //
+  // การจัดอันดับจริงใช้ embedding ซึ่งเป็นคนละ endpoint กับโมเดลตอบข้อความ และ
+  // ยังทำงานปกติแม้ตอนที่ฝั่ง generate ล่ม การปล่อยให้ error หลุดออกไปจะทำให้
+  // "ค้นหา" พังทั้งหน้าเพราะสกัด chip ไม่ได้ ทั้งที่ยังค้นแบบ semantic ได้สบาย
+  //
+  // ตัวชิปเป็นของเสริม ไม่ใช่แกน — เสียชิปยังค้นเจอ เสียการค้นหาคือใช้งานไม่ได้เลย
   let parsed: any = {}
   try {
+    const res = await withTimeout(
+      getGemini().models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: prompt,
+        // Force strict JSON output (no markdown fences / prose) so complex queries
+        // parse reliably instead of falling back to a plain semantic search.
+        config: { responseMimeType: 'application/json' },
+      })
+    )
     const raw = (res.text ?? '').replace(/```json|```/g, '').trim()
     // Extract the JSON object even if the model wraps it in prose.
     const start = raw.indexOf('{')
     const end = raw.lastIndexOf('}')
     parsed = JSON.parse(start >= 0 && end > start ? raw.slice(start, end + 1) : raw)
-  } catch {
+  } catch (e) {
+    console.error('extractSearchIntent fell back to plain semantic search:', e)
     parsed = {}
   }
   return {

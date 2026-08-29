@@ -6,3 +6,11 @@ node_modules/
 .superpowers/
 .claude/
 tsconfig.tsbuildinfo
+
+# ชุดประเมิน: pool.js มีชื่อ ประวัติ และข้อมูลส่วนบุคคลของผู้สมัครจริง
+# labels.json อ้างอิงถึงคนเหล่านั้นด้วย id — ทั้งคู่ห้ามขึ้น GitHub
+# หน้า eval/label.html ไม่มีข้อมูล จึง commit ได้ตามปกติ
+eval/pool.js
+eval/labels.json
+# rubric.json/js สร้างจากฟิลด์ของงาน ไม่มีข้อมูลผู้สมัคร แต่เป็นไฟล์ที่สร้างได้ใหม่
+eval/rubric.js

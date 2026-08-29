@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession, hasRole } from '@/lib/auth/session'
 import { getServerClient } from '@/lib/supabase/server'
 import { upsertCandidate } from '@/lib/ingest/upsert'
+import { logActivity } from '@/lib/activity/log'
 
 // POST /api/pending/[id]/approve — เอาแถวในคิวเข้า candidates จริง
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +45,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .from('pending_candidates')
     .update({ status: 'approved', reviewed_by: session.userId, reviewed_at: new Date().toISOString() })
     .eq('id', id)
+
+  await logActivity({
+    actorId: session.userId,
+    action: 'approve',
+    entityType: 'candidate',
+    entityId: result.id,
+    summary: (row as any).payload?.full_name ?? 'ไม่ทราบชื่อ',
+  })
 
   return NextResponse.json({ ok: true, candidateId: result.id })
 }

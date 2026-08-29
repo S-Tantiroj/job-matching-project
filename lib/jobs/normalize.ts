@@ -12,15 +12,28 @@ export type JobInput = {
 
 // Flatten a job into one text blob for embedding — same 768-dim space as
 // candidates so job and candidate vectors are directly comparable.
+//
+// The line order deliberately MIRRORS buildEmbedText on the candidate side:
+//
+//   candidate: full_name / headline / industry / summary / skills / degree+institution / title+company
+//   job:       title     / category / description / required_skills / (—)             / title+company
+//
+// Same information as before, arranged so each slot faces its counterpart. This
+// matters because a scraped candidate can arrive with no skills and no summary
+// (the PhantomBuster search export has neither), leaving a title-and-company
+// profile facing a skills-and-description job posting — two vectors describing
+// the same role in different vocabulary. The trailing `title company` line is
+// the one addition: it gives the job an experience-shaped line to match the
+// candidate's, which is the field scraped profiles always have.
 export function buildJobEmbedText(j: JobInput): string {
   return [
     j.title,
-    j.company,
     j.category,
-    j.location,
+    j.description,
     (j.required_skills ?? []).join(', '),
     j.min_experience_years != null ? `${j.min_experience_years}+ years experience` : '',
-    j.description,
+    [j.title, j.company].filter(Boolean).join(' '),
+    j.location,
   ]
     .filter(Boolean)
     .join('\n')

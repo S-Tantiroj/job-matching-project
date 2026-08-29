@@ -67,9 +67,32 @@ Vitest does not auto-load `.env`; integration tests start with `import 'dotenv/c
 
 ## Testing
 
-TDD per the plan: write the failing test, make it pass, commit. Unit tests
-(pure logic) run offline; integration tests hit real Supabase + Gemini and must
-clean up after themselves (use a unique name, delete on teardown).
+TDD per the plan: write the failing test, make it pass, commit.
+
+**สองชุดแยกกันด้วยชื่อไฟล์** — `*.int.test.ts` คือ integration ที่แตะ Supabase และ
+Gemini จริง ส่วนที่เหลือเป็น unit ที่ไม่แตะเครือข่ายเลย
+
+- `npm test` — unit เท่านั้น (32 ไฟล์) **ต้องเขียวเสมอ** ถ้าแดงแปลว่าโค้ดผิดจริง
+- `npm run test:integration` — integration (9 ไฟล์) รันเมื่อบริการพร้อม
+- `npm run test:all` — ทั้งสองชุด
+
+integration ต้องเก็บกวาดของตัวเอง (ใช้ชื่อขึ้นต้น `__test__` แล้วลบตอนจบ)
+
+**`fileParallelism: false` ในชุด integration ห้ามเอาออก** — ทุกไฟล์ใช้ฐานข้อมูล
+เดียวกัน การรันขนานทำให้ fixture ของไฟล์หนึ่งถูกลบระหว่างที่อีกไฟล์กำลังอ่านอยู่
+
+**อย่าใช้ `.limit(1)` โดยไม่มี `.order()` ในเทสต์** — ไม่มี ORDER BY แปลว่า Postgres
+คืนแถวแรกในฮีป และหลังมีการลบข้อมูล ช่องว่างต้นฮีปจะถูกใช้ซ้ำกับแถวที่แทรกใหม่
+fixture ของเทสต์อื่นจึงกลายเป็นแถวแรกได้ เคยทำให้ `score.int.test.ts` พังแบบสุ่ม
+
+**ความล้มเหลวชั่วคราวของบริการภายนอกให้ "ข้าม" ไม่ใช่ "ตก"** — ห่อด้วย
+`tolerateOutage` จาก `test-utils/integration.ts` ซึ่งข้ามเฉพาะ 503 / 429 / timeout
+และพิมพ์เหตุผลออกมา ส่วนความล้มเหลวอื่นยังตกตามปกติ เทสต์ที่แดงเพราะ Gemini
+ถูกจำกัดความจุคือสัญญาณลวง และสัญญาณลวงสอนให้คนเลิกสนใจสีแดง
+
+**เพดานเวลาการเรียก Gemini** อยู่ที่ `lib/gemini/withTimeout.ts` ปรับด้วย
+`GEMINI_TIMEOUT_MS` — เคยวัดได้ว่า free tier ตอบคำขอ 20 token ช้าถึง 52 วินาที
+และคืน 503 หลังรอ 155 วินาที การไม่มีเพดานแปลว่าผู้ใช้รอค้างโดยไม่มีอะไรบอก
 
 ## Data model (see migration 001)
 
@@ -136,11 +159,15 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-06-v2-data-management*`
 - [x] Data-quality badges — `lib/candidates/quality.ts`. A candidate with a NULL
       `embedding` never appears in search (both RPCs filter it out); this table is
       the only place that surfaces it. Migration 010 = `duplicate_candidate_names`.
-- [x] Edit main fields — `PATCH /api/candidates/[id]` → `lib/candidates/update.ts`.
-      **Never build candidate edits on `upsertCandidate`** — that deletes and
-      rewrites the education/experience/skills child rows. Re-embed is decided by
-      comparing `buildEmbedText(before) !== buildEmbedText(after)`, so it stays
-      correct for any field without maintenance.
+- [~] Edit main fields — **ถอดออกแล้ว** (เคยเป็น `PATCH /api/candidates/[id]` →
+      `lib/candidates/update.ts` + `EditCandidateModal`, ลบทั้งสามไฟล์)
+      **อย่าเพิ่มกลับโดยไม่แก้เรื่องนี้ก่อน:** ตาราง `candidates` เป็นภาพสะท้อนของ
+      แหล่งข้อมูลภายนอก และการแก้แถวที่ `source = 'scraper'` ไร้ผลอยู่แล้ว —
+      `updateCandidateFields` อัปเดต `embed_hash` ตามข้อความที่แก้ รอบ sync ถัดไป
+      จึงพบว่า hash ของข้อมูลที่ scrape มาไม่ตรง แล้วเขียนทับทั้งแถวเงียบๆ ผู้ใช้
+      เห็นว่าแก้สำเร็จแล้วค่ากลับคืนเองในคืนถัดมาโดยไม่มีคำอธิบาย
+      ถ้าจะทำใหม่ ต้องมีคอลัมน์ระบุว่าฟิลด์ไหนถูกแก้ด้วยมือ แล้วให้ `upsertCandidate`
+      เว้นฟิลด์เหล่านั้นไว้ ไม่ใช่แค่เปิด UI กลับมา
 - [x] Change password (verifies the current one via `signInWithPassword` first —
       Supabase's `updateUser` does not check it), forgot/reset password
 - [x] Email confirmation on signup → `/auth/confirm` auto-logs in then redirects.
@@ -195,6 +222,62 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-24-scraper-automation*`
 - cron ของ GitHub เป็น **UTC** — `0 19 * * *` = 02:00 เวลาไทยของวันถัดไป
 - ยังไม่ได้ยืนยัน `lib/ingest/phantombuster.ts` กับ API จริง (ยังไม่มีบัญชี) แยกไฟล์ไว้
   เพื่อให้แก้จุดเดียวเมื่อพบรูปร่างจริง
+
+#### รูปร่าง CSV จริงจาก PhantomBuster (ยืนยันกับไฟล์ตัวอย่างแล้ว)
+
+- **มี phantom สองแบบและตั้งชื่อคอลัมน์ไม่เหมือนกัน** — profile scraper ใช้ชื่อขึ้นต้น
+  `linkedin*` (`linkedinJobTitle`) ส่วน search export ใช้ชื่อสั้น (`jobTitle`)
+  **ไฟล์ไม่ได้บอกว่ามาจาก phantom ตัวไหน** `parseLinkedInCsv` จึงรับทั้งสองชื่อทุกฟิลด์
+  ผ่าน `makeGetter(...aliases)` ที่คืนค่าแรกที่ไม่ว่าง — ส่งชื่อ `linkedin*` ก่อนเสมอ
+  เพราะ profile scraper เป็นแหล่งที่ข้อมูลครบกว่า
+- **search export ไม่มี `skills`, `jobDescription`, `fieldOfStudy`, `professionalEmail`
+  เลย ไม่ใช่แค่ชื่อไม่ตรง** — สามในนั้นป้อน `buildEmbedText` โดยตรง ถ้าใช้ phantom นี้
+  เป็นแหล่งหลัก embedding จะบางกว่าที่ระบบค้นหาถูกออกแบบมารองรับ ตัวใกล้เคียงที่สุดคือ
+  `additionalInfo` ซึ่งแมปเข้า `summary`
+- **`additionalInfo` ถูก HTML-escape แต่คอลัมน์อื่นไม่** (`&amp;` ในไฟล์จริง) จึง decode
+  entity ที่ชั้น `get()` ไม่ใช่รายฟิลด์ — ค่านี้ทั้งแสดงต่อผู้ใช้และเข้า embedding
+  ("amp" จะกลายเป็น token ขยะ) ลำดับการ decode สำคัญ: `&amp;` ต้องเป็นตัวสุดท้าย
+- **แถวที่ scrape ไม่สำเร็จมาเป็นแถวว่างพร้อม URL** — ตัวอย่างจริง 15 แถวใช้ได้ 10
+  `parseLinkedInCsv` ทิ้งแถวไม่มีชื่ออยู่แล้ว ไม่ต้องแก้อะไรเพิ่ม
+- **ตารางในฐานข้อมูลไม่ต้องแก้เพราะ header ไม่ตรง** — ฟิลด์ที่ขาดเป็น NULL ได้ทั้งหมด
+  (migration 014 เพิ่ม `industry` ด้วยเหตุผลอื่น ดูหัวข้อถัดไป)
+
+#### ผลกระทบของการไม่มี skills / jobDescription / fieldOfStudy
+
+- **`fieldOfStudy` และ `jobDescription` ไม่เคยอยู่ใน `buildEmbedText` ตั้งแต่แรก** —
+  education ใช้แค่ `degree institution country` และ experience ใช้แค่ `title company`
+  การขาดสองฟิลด์นี้จึงไม่กระทบการจัดอันดับเลย กระทบเฉพาะ `analyzeCandidate`
+  ซึ่งรับแถว education/experience เต็มจาก `score.ts`
+- **วัดแล้วด้วย `scripts/ablate-embedding.ts`** (25 คน 4 งาน): ตัด skills ออก
+  Spearman 0.951 / top-10 8.5-10 · ตัด summary ออกด้วย Spearman 0.856
+  **summary สำคัญกว่า skills** ซึ่งเข้าทางเรา เพราะ search export ให้ `additionalInfo` มา
+- **ตัวเลขนั้นเป็นขอบบน** — ผู้สมัครที่ทดสอบทั้งหมดเป็น `source = 'synthetic'`
+  ซึ่ง skills มักพูดซ้ำสิ่งที่ headline บอกอยู่แล้ว ของจริงอาจมี skills ที่ headline
+  ไม่ได้บอก ให้รันสคริปต์นี้ซ้ำเมื่อมีคนจริงพร้อม skills สัก 30 คน
+
+#### migration 014 — `candidates.industry`
+
+- `industry` มาจาก PhantomBuster ทั้งสอง phantom และเป็นคู่เทียบของ `jobs.category`
+  ที่อยู่ใน `buildJobEmbedText` อยู่แล้ว — เป็นสัญญาณฟรีที่เดิมถูกทิ้ง
+- **กับดัก: ทุกคอลัมน์ที่ `buildEmbedText` ใช้ ต้องอยู่ใน `.select()` ของ
+  `lib/candidates/update.ts`** แม้จะแก้จากหน้าเว็บไม่ได้ก็ตาม ถ้าลืม ค่านั้นจะหายจาก
+  `after` แล้วการ re-embed จะเขียนทับ embedding ด้วยข้อความที่ขาดค่านั้นไปเงียบๆ
+  ค่าประเภทนี้อยู่ใน `shared` เพื่อให้ทั้ง `before` และ `after` ถือค่าเดียวกัน
+- `updateCandidateFields` เดิม**ไม่อัปเดต `embed_hash`** ตอน re-embed แก้แล้ว —
+  hash ต้องขยับพร้อม embedding เสมอ ไม่งั้นการรัน sync คืนถัดไปเทียบกับ hash ที่ไม่ตรง
+  กับ embedding ที่เก็บอยู่จริง
+- การเพิ่ม `industry` เข้า `buildEmbedText` **ไม่ทำให้แถวเดิมต้อง re-embed** เพราะ
+  `filter(Boolean)` ตัดค่า null ทิ้ง ข้อความที่ embed ของคนที่ยังไม่มี industry จึงเท่าเดิม
+  เป๊ะ hash จึงตรงเหมือนเดิม — จะ re-embed เฉพาะคนที่รอบใหม่ได้ industry มาจริง
+  ซึ่งเป็นพฤติกรรมที่ต้องการอยู่แล้ว
+
+#### `buildJobEmbedText` เรียงให้สมมาตรกับฝั่งผู้สมัคร
+
+ลำดับบรรทัดจงใจให้ตรงคู่กัน `title↔headline`, `category↔industry`,
+`description↔summary`, `required_skills↔skills` และเพิ่มบรรทัด `title company`
+ให้ตรงกับบรรทัด experience ของผู้สมัคร เพราะผู้สมัครที่ scrape มาอาจเหลือแค่ตำแหน่ง
+กับบริษัทเท่านั้น **แก้ไฟล์นี้แล้วต้อง re-embed งานทั้งหมด** — `npx tsx scripts/seed-jobs.ts`
+ทำให้เอง (upsert บน `source,external_id` แล้วคำนวณ embedding ใหม่)
 
 ### Not done / deliberately deferred
 - Google sign-in — deferred from v2. Risk: an existing email/password user

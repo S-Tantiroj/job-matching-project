@@ -4,6 +4,7 @@ import Timeline from '@/components/Timeline'
 import AnalyzePanel from '@/components/AnalyzePanel'
 import AddToShortlist from '@/components/AddToShortlist'
 import SuppressButton from '@/components/SuppressButton'
+import { logActivity } from '@/lib/activity/log'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,20 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
     .single()
 
   if (!c) return <main><p className="faint">ไม่พบผู้สมัคร</p></main>
+
+  // บันทึกการเปิดดูเพื่อให้ dashboard แสดง "ผู้สมัครที่เพิ่งดู"
+  // ไม่ await เพราะเป็นผลพลอยได้ — ไม่ควรหน่วงการแสดงหน้า และ logActivity
+  // กลืน error ไว้เองอยู่แล้ว
+  if (session) {
+    void logActivity({
+      actorId: session.userId,
+      action: 'view',
+      entityType: 'candidate',
+      entityId: id,
+      summary: (c as any).full_name,
+      metadata: { headline: (c as any).headline ?? null },
+    })
+  }
 
   const skills: string[] = (c as any).candidate_skills?.map((x: any) => x.skills?.name).filter(Boolean) ?? []
 
@@ -55,7 +70,7 @@ export default async function CandidatePage({ params }: { params: Promise<{ id: 
       </div>
 
       <AnalyzePanel candidateId={id} />
-      <AddToShortlist candidateId={id} />
+      <AddToShortlist candidateId={id} candidateName={(c as any).full_name} />
 
       {canSuppress && (
         <>

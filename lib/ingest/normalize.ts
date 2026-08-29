@@ -1,6 +1,7 @@
 export type CandidateInput = {
   full_name: string
   headline?: string
+  industry?: string
   location?: string
   summary?: string
   source: 'synthetic' | 'csv' | 'upload' | 'scraper'
@@ -31,6 +32,9 @@ export function buildEmbedText(i: CandidateInput): string {
   return [
     i.full_name,
     i.headline,
+    // มาคู่กับ headline เพราะทั้งคู่บอก "คนนี้อยู่วงการไหน" และเป็นคู่เทียบของ
+    // jobs.category ใน buildJobEmbedText
+    i.industry,
     i.summary,
     (i.skills ?? []).join(', '),
     (i.education ?? [])

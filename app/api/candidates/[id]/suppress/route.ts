@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, hasRole } from '@/lib/auth/session'
 import { getServerClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/activity/log'
 
 // POST /api/candidates/[id]/suppress  body: { reason?: string }
 // ลบผู้สมัครและเพิ่มเข้ารายชื่อระงับ "ในการกระทำเดียว"
@@ -63,6 +64,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   await db.from('pending_candidates').delete().eq('linkedin_url', url)
+
+  await logActivity({
+    actorId: session.userId,
+    action: 'suppress',
+    entityType: 'candidate',
+    entityId: id,
+    summary: (c as any).full_name,
+    metadata: { linkedin_url: url, reason: reason || null, source: 'คำขอของเจ้าของข้อมูล' },
+  })
 
   return NextResponse.json({ ok: true })
 }
