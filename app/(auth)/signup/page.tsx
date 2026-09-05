@@ -65,6 +65,12 @@ export default function SignUp() {
           {busy ? 'กำลังสมัคร…' : 'สมัคร'}
         </button>
         {msg && <p style={{ color: 'var(--bad)', margin: 0 }}>{msg}</p>}
+        {/* จุดที่ผู้ใช้ยอมรับข้อกำหนด ต้องอยู่ตรงนี้ก่อนกดสมัคร ไม่ใช่ซ่อนใน footer
+            เพราะข้อกำหนดห้ามใช้คะแนน AI ตัดสินคนโดยลำพัง ซึ่งเป็นข้อผูกพันจริง */}
+        <p className="faint" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6 }}>
+          การสมัครถือว่าท่านยอมรับ <a href="/terms">ข้อกำหนดการใช้งาน</a> และ{' '}
+          <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
+        </p>
         <a href="/login">มีบัญชีแล้ว? เข้าสู่ระบบ</a>
       </div>
     </main>

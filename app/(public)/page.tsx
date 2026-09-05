@@ -80,7 +80,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="pub-footer">Skouth · ระบบสรรหาและประเมินผู้สมัคร</footer>
+      <footer className="pub-footer">
+        Skouth · ระบบสรรหาและประเมินผู้สมัคร
+        <br />
+        <Link href="/terms">ข้อกำหนดการใช้งาน</Link> ·{' '}
+        <Link href="/privacy">นโยบายความเป็นส่วนตัว</Link> ·{' '}
+        <Link href="/help">คู่มือการใช้งาน</Link>
+      </footer>
     </main>
   )
 }

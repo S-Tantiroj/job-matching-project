@@ -38,7 +38,11 @@ export default function HelpPage() {
         <a href={`mailto:${CONTACT_EMAIL}`} className="btn">{CONTACT_EMAIL}</a>
       </section>
 
-      <footer className="pub-footer">Skouth · ระบบสรรหาและประเมินผู้สมัคร</footer>
+      <footer className="pub-footer">
+        Skouth · ระบบสรรหาและประเมินผู้สมัคร
+        <br />
+        <a href="/terms">ข้อกำหนดการใช้งาน</a> · <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
+      </footer>
     </main>
   )
 }
