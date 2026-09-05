@@ -291,6 +291,30 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-24-scraper-automation*`
 - `/api/ingest`'s 403 role gate has no test — `route.test.ts` stubs
   `hasRole: () => true`.
 
+## หน้าสาธารณะ
+
+`/` และ `/help` อยู่ในกลุ่ม `(public)` เปิดให้เข้าโดยไม่ต้องล็อกอิน — `matcher` ใน
+`middleware.ts` เป็นรายการเจาะจงที่ไม่ครอบสองเส้นทางนี้ **อย่าเพิ่มเข้าไป**
+
+`app/page.tsx` เดิมถูกลบและย้ายเข้ากลุ่ม พร้อม**เอา redirect ไป `/dashboard` ออก** —
+ของเดิมทำให้เจ้าของระบบดูหน้าแนะนำของตัวเองไม่ได้เลยเวลาล็อกอินอยู่
+
+**เนื้อหาคู่มืออยู่สามที่และต้องแก้พร้อมกัน** — `components/help/UserGuide.tsx`,
+`components/help/UatTable.tsx` และ `docs/uat/skouth-uat.md` เป็นการตัดสินใจที่ตั้งใจ
+(แลกความเสี่ยงเรื่องความไม่ตรงกันกับอิสระในการจัดหน้า PDF) ตัวลดความเสี่ยงคือ
+ขยับ `version` ใน `lib/help/docMeta.ts` ทุกครั้งที่แก้ แล้วสร้าง PDF ใหม่
+ครั้งแรก `skouth-uat.md` ถูกสร้างจาก TSX สองไฟล์นั้นด้วยสคริปต์ จึงเริ่มต้นตรงกันจริง
+
+**PDF ต้องสร้างบนเครื่อง Windows** — sandbox ไม่มีฟอนต์ไทยและติดตั้งเพิ่มไม่ได้
+(PyPI และ apt ถูกปิดด้วย 403) ไฟล์ที่สร้างจากที่นั่นจะเป็นสี่เหลี่ยมเปล่าทั้งฉบับ
+
+**ปุ่มหลักบนหน้าแรกอยู่ที่ `lib/public/cta.ts`** จุดเดียว จะเปลี่ยนเป็น
+"สมัครด้วยอีเมลองค์กร" เมื่องานจำกัดโดเมนเสร็จ (ดู "งานถัดไป" ใน
+`docs/superpowers/specs/2026-08-29-public-pages-design.md`)
+
+**`lib/help/docAssets.test.ts` ตั้งใจให้ตกไว้ก่อน** จนกว่าจะมีไฟล์ PDF จริงและ
+ใส่อีเมลกลางองค์กรแทน placeholder — เป็นรายการงานค้างที่บังคับตัวเอง ไม่ใช่บั๊ก
+
 ## Gemini free-tier note
 
 Free tier = 5 generate requests/min per model. Do NOT call the generation model
