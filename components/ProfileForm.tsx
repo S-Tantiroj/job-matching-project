@@ -14,6 +14,37 @@ export function parseSkillInput(text: string): string[] {
     .filter(Boolean)
 }
 
+// แมปชื่อฟิลด์จากเซิร์ฟเวอร์ไปยังป้ายชื่อไทยที่ผู้ใช้เข้าใจ เพื่อบอกว่าส่วนไหนของฟอร์มมีปัญหา
+// ชื่อฟิลด์ที่เซิร์ฟเวอร์อาจส่งมา: top-level (full_name, headline, etc.) และ nested
+// (education.institution, experience.title, เป็นต้น) หรือ "_" สำหรับข้อผิดพลาดทั่วไป
+// ค่ากลับคืนเป็นสตริง กลับคืนว่างสำหรับ "_" หรือค่าที่ไม่ทราบ (ให้เพียงแค่ข้อความข้อผิดพลาด)
+export function fieldToLabel(field: string | undefined): string {
+  if (!field) return ''
+  const labels: Record<string, string> = {
+    full_name: 'ชื่อ-นามสกุล',
+    headline: 'ตำแหน่งย่อ',
+    industry: 'อุตสาหกรรม',
+    location: 'สถานที่',
+    summary: 'แนะนำตัวเอง',
+    education: 'การศึกษา',
+    'education.institution': 'การศึกษา › สถาบัน',
+    'education.country': 'การศึกษา › ประเทศ',
+    'education.degree': 'การศึกษา › วุฒิ',
+    'education.field_of_study': 'การศึกษา › สาขา',
+    'education.gpa': 'การศึกษา › ผลการเรียน',
+    'education.start_year': 'การศึกษา › ปีเริ่ม',
+    'education.end_year': 'การศึกษา › ปีจบ',
+    experience: 'ประสบการณ์ทำงาน',
+    'experience.company': 'ประสบการณ์ทำงาน › บริษัท',
+    'experience.title': 'ประสบการณ์ทำงาน › ตำแหน่ง',
+    'experience.description': 'ประสบการณ์ทำงาน › รายละเอียดงาน',
+    'experience.start_date': 'ประสบการณ์ทำงาน › วันที่เริ่มต้น',
+    'experience.end_date': 'ประสบการณ์ทำงาน › วันที่สิ้นสุด',
+    skills: 'สกิล',
+  }
+  return labels[field] ?? ''
+}
+
 // ฟอร์มเดียวใช้สองทาง: ตรวจร่างที่อ่านมาจาก PDF และกรอกเองตั้งแต่ต้น
 // ต่างกันแค่ค่า initial ที่ส่งเข้ามา — นั่นคือเหตุผลที่ "กรอกเอง" แทบไม่มีต้นทุนเพิ่ม
 //
@@ -72,7 +103,10 @@ export default function ProfileForm({
 
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
-      return setError(json.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่')
+      const fieldLabel = fieldToLabel(json.field)
+      const message = json.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+      const displayText = fieldLabel ? `${fieldLabel}: ${message}` : message
+      return setError(displayText)
     }
     onSaved()
   }
