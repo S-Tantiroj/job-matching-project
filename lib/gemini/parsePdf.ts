@@ -60,8 +60,12 @@ export function parseProfileResponse(text: string): ProfileDraft {
 function coerceForReview(p: any): any {
   const cut = (v: unknown, max: number) =>
     typeof v === 'string' ? v.slice(0, max) : undefined
-  const iso = (v: unknown) =>
-    typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined
+  const iso = (v: unknown) => {
+    if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined
+    const d = new Date(v)
+    if (isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v) return undefined
+    return v
+  }
   const yr = (v: unknown) => {
     const n = Number(v)
     return Number.isInteger(n) && n >= LIMITS.yearMin && n <= LIMITS.yearMax ? n : undefined

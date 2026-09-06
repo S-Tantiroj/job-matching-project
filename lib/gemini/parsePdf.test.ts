@@ -58,6 +58,31 @@ test('วันที่ผิดรูปจากโมเดลถูกท�
   expect(d.experience![0].start_date).toBeUndefined()
 })
 
+test('วันที่ไม่มีจริงในปฏิทิน (เช่น Feb 30) ถูกทิ้ง ไม่ทำให้ทั้งไฟล์อ่านไม่สำเร็จ', () => {
+  // iso() ต้องตรวจความถูกต้องของปฏิทิน ไม่ใช่แค่รูปแบบ
+  // "2023-02-30" ผ่านรูปแบบ แต่ไม่มีวันที่ 30 ของเดือนกุมภาพันธ์
+  const d = parseProfileResponse(
+    wrap({
+      full_name: 'Somchai Jaidee',
+      experience: [{ company: 'Agoda', title: 'Dev', start_date: '2023-02-30' }],
+    })
+  )
+  expect(d.experience![0].company).toBe('Agoda')
+  expect(d.experience![0].start_date).toBeUndefined()
+})
+
+test('เดือนนอกช่วง (เช่น month 13) ถูกทิ้ง ไม่ทำให้ทั้งไฟล์อ่านไม่สำเร็จ', () => {
+  // "2020-13-01" ผ่านรูปแบบ แต่เดือนที่ 13 ไม่มีในปฏิทิน
+  const d = parseProfileResponse(
+    wrap({
+      full_name: 'Somchai Jaidee',
+      experience: [{ company: 'Agoda', title: 'Dev', end_date: '2020-13-01' }],
+    })
+  )
+  expect(d.experience![0].company).toBe('Agoda')
+  expect(d.experience![0].end_date).toBeUndefined()
+})
+
 test('ปีนอกช่วงจากโมเดลถูกทิ้ง ไม่ทำให้ทั้งไฟล์อ่านไม่สำเร็จ', () => {
   const d = parseProfileResponse(
     wrap({ full_name: 'Somchai Jaidee', education: [{ institution: 'X', end_year: 0 }] })
