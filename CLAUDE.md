@@ -384,11 +384,19 @@ From the Cowork Linux sandbox, this drive is mounted read-mostly:
 - **Working-tree file writes work.** Creating and editing source files is fine —
   that is how implementation happens from a session.
 - **Git reads work:** `git log`, `git status`, `git diff`, `git branch`, `git show`.
-- **Git writes do NOT work.** Anything needing `.git/index.lock` — `git add`,
-  `git commit`, `git checkout -- <file>` — fails with `Operation not permitted`,
-  because the sandbox cannot create or unlink files inside `.git/`.
-- **npm does not work** (blocked registry), so `npm install`, `npm run build`,
-  and `npx vitest` must run on Windows.
+- **Git writes DO work** (`git add`, `git commit`, `git restore`) — this was
+  false when first written and cost a session one uncommitted task because an
+  agent trusted this file over trying. Verify with a probe rather than assuming.
+- **npm install does NOT work** (registry returns 403), and `node_modules` is
+  installed from Windows, so anything needing a native binary fails on Linux:
+  **`npx vitest` and `npm run build`** (rollup wants `@rollup/rollup-linux-x64-gnu`)
+  and **`npx tsx`** (esbuild wants `@esbuild/linux-x64`). Run those on Windows.
+- **`npx tsc --noEmit` DOES work** and is the strongest check available in a
+  session. Baseline: **0 errors outside `*.test.ts`**; the ~500 errors inside
+  test files are pre-existing (vitest globals are not in `tsconfig` `types`),
+  so filter with `| grep -v "\.test\.ts"`.
+- **No DNS to Supabase or Gemini** (both `EAI_AGAIN`) — no integration test and
+  no script that calls either service can run from a session.
 
 **Trap:** a failed git write leaves a stale zero-byte `.git/index.lock` that the
 sandbox cannot delete. Every later git command on Windows then fails with
