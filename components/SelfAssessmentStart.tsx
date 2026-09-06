@@ -3,20 +3,12 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { validateUpload } from '@/lib/self/validateUpload'
 import { EMPTY_DRAFT, type ProfileDraft } from '@/lib/self/profileDraft'
+import { isStaleAttempt } from '@/lib/self/staleAttempt'
 import ProfileForm from './ProfileForm'
 
 type Step =
   | { name: 'choose' }
   | { name: 'form'; draft: ProfileDraft; fileName?: string }
-
-// เทียบเลขรุ่นความพยายาม (attempt) ที่บันทึกไว้ตอนเริ่มคำขอ กับเลขรุ่นปัจจุบันของ
-// คอมโพเนนต์ — ถ้าไม่ตรงกันแปลว่าผู้ใช้ไปเริ่มอย่างอื่นแล้วระหว่างที่คำขอเก่ายังไม่
-// เสร็จ (กดย้อนกลับ, เริ่มอัปโหลดใหม่, ไปกรอกเอง) ต้องทิ้งผลของคำขอเก่าไปเงียบๆ
-// ดึงออกมาเป็นฟังก์ชันล้วนเพื่อเทสต์ได้โดยไม่ต้อง mount คอมโพเนนต์ ตามแบบ
-// buildTimeline ใน components/Timeline.tsx
-export function isStaleAttempt(requestAttempt: number, currentAttempt: number): boolean {
-  return requestAttempt !== currentAttempt
-}
 
 // สองทางเข้าคู่กันตั้งแต่แรก ไม่ใช่ให้ "กรอกเอง" โผล่เฉพาะตอนอัปโหลดล้มเหลว
 // เพราะคนที่ไม่มีไฟล์ CV เลย — นักศึกษาจบใหม่ หรือคนที่ประวัติอยู่ใน Google Docs —
