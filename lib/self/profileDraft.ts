@@ -8,7 +8,14 @@ import type { CandidateInput } from '@/lib/ingest/normalize'
 export type DraftEducation = NonNullable<CandidateInput['education']>[number] & {
   gpa?: string
 }
-export type ProfileDraft = Omit<CandidateInput, 'source' | 'education' | 'raw'> & {
+// linkedin_url, professional_email, refreshed_at ก็ถูกตัดออกเช่นกัน — ไม่มีช่องกรอก
+// ในฟอร์มนี้เลย (มีแต่ที่มาจากการ scrape) และ validateProfileDraft ก็ประกอบ draft
+// ใหม่จากค่าที่ตรวจแล้วเท่านั้นโดยไม่เคยใส่สามฟิลด์นี้ ถ้าไม่ตัดออกจาก type ตรงนี้
+// ProfileDraft จะโฆษณาฟิลด์ที่ไม่มีทางมีค่าจริง
+export type ProfileDraft = Omit<
+  CandidateInput,
+  'source' | 'education' | 'raw' | 'linkedin_url' | 'professional_email' | 'refreshed_at'
+> & {
   education?: DraftEducation[]
 }
 
@@ -41,16 +48,31 @@ export const LIMITS = {
 // เพราะเราบอกผู้ใช้ว่าเพิ่มเองได้ ถ้าสองค่านี้เท่ากันคำเชิญนั้นจะเป็นคำโกหก
 export const PARSE_ENTRY_LIMIT = 10
 
-export const EMPTY_DRAFT: ProfileDraft = {
+// Object.freeze คืน Readonly<T> จาก lib.es5 มาตรฐาน ห่อด้วย helper ที่ยืนยัน type
+// เป็น T เฉยๆ เพื่อไม่ให้ readonly ไหลเข้า ProfileDraft ที่ export ออกไป (โค้ดที่ใช้
+// EMPTY_DRAFT เป็นค่า initial ไม่ควรต้องรู้ว่าข้างในถูกแช่แข็ง)
+function frozen<T>(o: T): T {
+  return Object.freeze(o) as T
+}
+
+// ค่าเริ่มต้นตัวเดียวที่ทั้งฟอร์มตรวจ (ProfileForm ผ่าน initial) และฟอร์มกรอกเอง
+// (SelfAssessmentStart ส่งตรงเป็น draft) ใช้ร่วมกัน — ProfileForm ทำแค่
+// shallow-spread (`{ ...EMPTY_DRAFT, ...initial }`) ทำให้ education/experience/skills
+// เป็น**อาร์เรย์เดียวกัน**ทุกครั้งที่ไม่ถูก initial ทับ ถ้ามีโค้ดที่ไหนสัก push()
+// เข้าอาร์เรย์นั้นตรงๆ (แทนที่จะสร้างอาร์เรย์ใหม่แบบที่ setEdu/setExp ทำอยู่) ค่าจะ
+// เพี้ยนสำหรับทุก session ถัดไปที่ import โมดูลนี้ (module cache เก็บ instance เดียว)
+// แช่แข็งทั้งอ็อบเจ็กต์และอาร์เรย์ข้างในเพื่อให้การ mutate โยน TypeError ทันทีแทนที่จะ
+// ทำให้ข้อมูลเพี้ยนเงียบๆ — เปลี่ยนบั๊กที่ไม่มีอาการให้เห็นเป็นบั๊กที่ throw ทันทีในเทสต์/dev
+export const EMPTY_DRAFT: ProfileDraft = frozen({
   full_name: '',
   headline: '',
   industry: '',
   location: '',
   summary: '',
-  education: [],
-  experience: [],
-  skills: [],
-}
+  education: frozen([]) as DraftEducation[],
+  experience: frozen([]) as NonNullable<ProfileDraft['experience']>,
+  skills: frozen([]) as string[],
+})
 
 type Fail = { ok: false; field: string; message: string }
 type Pass = { ok: true; draft: ProfileDraft }

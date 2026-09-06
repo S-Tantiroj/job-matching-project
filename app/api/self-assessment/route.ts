@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { validateProfileDraft } from '@/lib/self/profileDraft'
 import { createSelfProfile } from '@/lib/self/createProfile'
+import { isTransient } from '@/lib/gemini/withTimeout'
 
 // POST /api/self-assessment — JSON { draft: ProfileDraft, fileName?: string }
 // ทุก role ที่ล็อกอินใช้ได้ ไม่ต้อง gate ด้วย hasRole เพราะเป็นฟีเจอร์สำหรับทุกคน
@@ -40,9 +41,9 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('self-assessment save failed:', e?.message ?? e)
 
-    const msg = String(e?.message ?? '')
-    const upstreamBusy = msg.includes('"code":503') || msg.includes('"code":429')
-    if (upstreamBusy) {
+    // timeout (withTimeout ตัดคำขอที่ค้างนาน) ก็เป็นความล้มเหลวชั่วคราวเหมือน 503/429 —
+    // ใช้ isTransient ตัวเดียวกับ analyze.ts และ extractFilters.ts แทนการเช็คสตริงเอง
+    if (isTransient(e)) {
       // ฟอร์มยังอยู่ครบบนหน้าจอของผู้ใช้ กดวิเคราะห์ซ้ำได้เลยโดยไม่ต้องอ่าน PDF ใหม่
       // ซึ่งเป็นขั้นที่แพงที่สุด — นี่คือสิ่งที่ flow เดิมทำไม่ได้
       return NextResponse.json(

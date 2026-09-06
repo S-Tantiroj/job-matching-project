@@ -1,4 +1,5 @@
 import { getGemini } from './client'
+import { withTimeout, GEMINI_TIMEOUT_MS } from './withTimeout'
 import { computeYearsExperience } from '@/lib/ingest/normalize'
 import type { ProfileDraft } from '@/lib/self/profileDraft'
 import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape'
@@ -11,7 +12,19 @@ import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape
 // โดยไม่ต้องให้ผู้ใช้อัปโหลด PDF ซ้ำ
 
 // แยกการประกอบ prompt ออกมาเพื่อทดสอบเป็น unit ได้โดยไม่แตะเครือข่าย
+//
+// yearsExperience มาจาก computeYearsExperience ซึ่ง**ข้าม**รายการที่ไม่มี
+// start_date ไปเงียบๆ — ทั้งการกรอกเอง (ช่องวันที่ไม่บังคับ) และการอัปโหลด
+// (coerceForReview ทิ้งวันที่ผิดรูปโดยไม่บอกผู้ใช้) ทำให้เกิดโปรไฟล์ที่มี
+// ประสบการณ์จริงแต่ไม่มี start_date ที่ใช้ได้เลยสักรายการ ถ้าเป็น 0 เสมอในกรณีนี้
+// แล้วบอกโมเดลว่า "คำนวณแล้ว ใช้เลขนี้" โมเดลจะฟันธงว่าไม่มีประสบการณ์ทั้งที่ไม่จริง
+// จึงต้องแยกว่ามีรายการที่นับได้จริงอย่างน้อยหนึ่งรายการหรือไม่ ไม่ใช่ดูแค่ค่า 0
 export function buildAssessPrompt(profile: ProfileDraft, yearsExperience: number): string {
+  const hasUsableDates = (profile.experience ?? []).some((e) => !!e.start_date)
+  const experienceLine = hasUsableDates
+    ? `รวมประสบการณ์ทำงานประมาณ ${yearsExperience} ปี (คำนวณจากวันที่ในโปรไฟล์แล้ว ใช้ตัวเลขนี้ ไม่ต้องคำนวณเอง)`
+    : 'ไม่ทราบจำนวนปีประสบการณ์ทำงานที่แน่ชัด (โปรไฟล์ไม่มีวันที่เริ่มงานที่ใช้คำนวณได้) ห้ามสมมติว่าไม่มีประสบการณ์หรือคำนวณจำนวนปีเอง'
+
   return `วิเคราะห์โปรไฟล์ผู้สมัครต่อไปนี้ ตอบเป็น JSON เท่านั้น ทุกข้อความเป็นภาษาไทย
 
 {"strengths":["จุดแข็ง"],"weaknesses":["จุดที่ยังขาด"],"development":["สิ่งที่ควรพัฒนาต่อ"],"summary":"ภาพรวมสั้นๆ 1-2 ประโยค"}
@@ -22,7 +35,7 @@ export function buildAssessPrompt(profile: ProfileDraft, yearsExperience: number
 - ใช้น้ำเสียงให้กำลังใจและสร้างสรรค์ ไม่ตัดสินคุณค่าของบุคคล
 - ถ้ามีผลการเรียน (gpa) ให้พูดถึงได้ แต่อย่าเทียบข้ามสเกลที่ต่างกัน
 
-รวมประสบการณ์ทำงานประมาณ ${yearsExperience} ปี (คำนวณจากวันที่ในโปรไฟล์แล้ว ใช้ตัวเลขนี้ ไม่ต้องคำนวณเอง)
+${experienceLine}
 
 โปรไฟล์: ${JSON.stringify(profile)}`
 }
@@ -30,11 +43,14 @@ export function buildAssessPrompt(profile: ProfileDraft, yearsExperience: number
 export async function assessProfile(profile: ProfileDraft): Promise<Assessment> {
   const years = computeYearsExperience(profile.experience ?? [])
 
-  const res = await getGemini().models.generateContent({
-    model: 'gemini-flash-latest',
-    contents: buildAssessPrompt(profile, years),
-    config: { responseMimeType: 'application/json' },
-  })
+  const res = await withTimeout(
+    getGemini().models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: buildAssessPrompt(profile, years),
+      config: { responseMimeType: 'application/json' },
+    }),
+    GEMINI_TIMEOUT_MS
+  )
 
   const text = (res.text ?? '').replace(/```json|```/g, '').trim()
   const start = text.indexOf('{')

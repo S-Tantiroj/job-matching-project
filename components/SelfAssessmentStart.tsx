@@ -69,7 +69,18 @@ export default function SelfAssessmentStart({ label }: { label: string }) {
           initial={step.draft}
           fileName={step.fileName}
           onSaved={() => {
-            if (isStaleAttempt(myAttempt, attemptRef.current)) return
+            // แถวถูกสร้างในฐานข้อมูลจริงแล้ว ไม่ว่าความพยายามนี้จะยัง "ล่าสุด" หรือไม่
+            // ถ้าข้ามไปเงียบๆ ตอน stale ผู้ใช้ที่กดย้อนกลับระหว่างรอจะเห็นหน้าว่างเหมือน
+            // ไม่มีอะไรเกิดขึ้น แล้วมีโอกาสส่งซ้ำจนได้โปรไฟล์ซ้ำสอง — router.refresh()
+            // ต้องรันเสมอเพื่อให้หน้าสะท้อนสิ่งที่เกิดขึ้นจริง
+            //
+            // ส่วน setStep/setFile ข้ามเมื่อ stale เพราะผู้ใช้อาจเริ่มความพยายามใหม่
+            // ไปแล้ว (อัปโหลดไฟล์ใหม่ หรือกดกรอกเอง) การบังคับกลับไปหน้า "choose"
+            // ตอนนี้จะทับสถานะที่เขากำลังทำอยู่
+            if (isStaleAttempt(myAttempt, attemptRef.current)) {
+              router.refresh()
+              return
+            }
             setStep({ name: 'choose' })
             setFile(null)
             router.refresh()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { validateUpload } from '@/lib/self/validateUpload'
 import { parsePdfProfile } from '@/lib/gemini/parsePdf'
+import { isTransient } from '@/lib/gemini/withTimeout'
 
 // POST /api/self-assessment/parse — FormData { file: <PDF> }
 //
@@ -46,11 +47,11 @@ export async function POST(req: NextRequest) {
     // เป็นไฟล์ โมเดล หรือเครือข่าย
     console.error('self-assessment parse failed:', e?.message ?? e)
 
-    // แยก "ผู้ให้บริการไม่ว่าง" ออกจาก "ไฟล์มีปัญหา" — 503 = ความจุฝั่ง Google ตึง,
-    // 429 = โควตาหมด ทั้งสองไม่เกี่ยวกับไฟล์ การบอกให้ไปตรวจไฟล์คือการชี้ผิดทาง
-    const msg = String(e?.message ?? '')
-    const upstreamBusy = msg.includes('"code":503') || msg.includes('"code":429')
-    if (upstreamBusy) {
+    // แยก "ผู้ให้บริการไม่ว่าง/หมดเวลา" ออกจาก "ไฟล์มีปัญหา" — 503 = ความจุฝั่ง Google
+    // ตึง, 429 = โควตาหมด, timeout = withTimeout ตัดคำขอที่ค้างนาน ทั้งสามอย่าง
+    // ไม่เกี่ยวกับไฟล์ การบอกให้ไปตรวจไฟล์คือการชี้ผิดทาง ใช้ isTransient ตัวเดียวกับ
+    // ที่ analyze.ts และ extractFilters.ts ใช้ แทนการเช็คสตริงเองซึ่งไม่รู้จัก timeout
+    if (isTransient(e)) {
       return NextResponse.json(
         {
           error: 'ระบบ AI ไม่ว่างชั่วคราว (ไฟล์ของคุณไม่มีปัญหา) รอสักครู่แล้วลองใหม่ หรือกรอกข้อมูลเองก็ได้',

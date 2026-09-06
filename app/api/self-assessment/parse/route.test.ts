@@ -14,6 +14,42 @@ test('route อ่านไฟล์ต้องไม่ import supabase server
   expect(src).not.toMatch(/getServerClient/)
 })
 
+// เดิมเทสต์ข้างบนดักแค่สองคำนี้ — ถ้ามีใคร import createSelfProfile (ซึ่งเขียนลง
+// self_profiles โดยตรง ไม่ผ่าน supabase/server หรือ getServerClient ในไฟล์นี้เลย)
+// หรือ lib/ingest/upsert (เส้นทางเขียน candidates) เทสต์เดิมจะยังผ่านทั้งที่ผิดข้อตกลง
+// จึงเปลี่ยนมาตรวจ import specifier ทุกตัวในไฟล์กับ allowlist แทน — ของใหม่ที่ยังไม่รู้จัก
+// ต้องถูกเพิ่มเข้า allowlist อย่างตั้งใจ ไม่ใช่ผ่านไปเฉยๆ
+const ALLOWED_IMPORTS = new Set([
+  'next/server',
+  '@/lib/auth/session',
+  '@/lib/self/validateUpload',
+  '@/lib/gemini/parsePdf',
+  '@/lib/gemini/withTimeout',
+])
+
+function importSpecifiers(src: string): string[] {
+  const specifiers: string[] = []
+  const re = /import\s+(?:type\s+)?(?:[\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(src))) specifiers.push(m[1])
+  return specifiers
+}
+
+test('route อ่านไฟล์ต้อง import เฉพาะสิ่งที่จำเป็นจริง (allowlist)', () => {
+  const src = readFileSync('app/api/self-assessment/parse/route.ts', 'utf8')
+  const specifiers = importSpecifiers(src)
+  expect(specifiers.length).toBeGreaterThan(0) // กันเทสต์เขียวหลอกถ้า regex จับอะไรไม่ได้เลย
+  for (const spec of specifiers) {
+    expect(ALLOWED_IMPORTS.has(spec)).toBe(true)
+  }
+})
+
+test('route อ่านไฟล์ต้องไม่อ้างถึง createSelfProfile หรือ lib/ingest/upsert', () => {
+  const src = readFileSync('app/api/self-assessment/parse/route.ts', 'utf8')
+  expect(src).not.toMatch(/createSelfProfile/)
+  expect(src).not.toMatch(/lib\/ingest\/upsert/)
+})
+
 test('route อ่านไฟล์ต้องตรวจ session ก่อนเรียก Gemini', () => {
   // ต้องตรวจตำแหน่งของการ**เรียก**ฟังก์ชัน ไม่ใช่ที่ import เท่านั้น
   // เดิมเทสต์ดูแค่ว่า 'getSession' ปรากฏก่อน 'parsePdfProfile' ในไฟล์

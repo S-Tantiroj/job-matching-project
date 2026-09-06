@@ -1,4 +1,5 @@
 import { getGemini } from './client'
+import { withTimeout, GEMINI_TIMEOUT_MS } from './withTimeout'
 import {
   validateProfileDraft,
   PARSE_ENTRY_LIMIT,
@@ -108,20 +109,23 @@ function coerceForReview(p: any): any {
 }
 
 export async function parsePdfProfile(pdfBase64: string): Promise<ProfileDraft> {
-  const res = await getGemini().models.generateContent({
-    model: 'gemini-flash-latest',
-    contents: [
-      {
-        role: 'user',
-        parts: [
-          // เอกสาร Gemini แนะนำให้วาง part ของไฟล์ก่อนข้อความ prompt
-          { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
-          { text: PROMPT },
-        ],
-      },
-    ],
-    config: { responseMimeType: 'application/json' },
-  })
+  const res = await withTimeout(
+    getGemini().models.generateContent({
+      model: 'gemini-flash-latest',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            // เอกสาร Gemini แนะนำให้วาง part ของไฟล์ก่อนข้อความ prompt
+            { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
+            { text: PROMPT },
+          ],
+        },
+      ],
+      config: { responseMimeType: 'application/json' },
+    }),
+    GEMINI_TIMEOUT_MS
+  )
 
   return parseProfileResponse(res.text ?? '')
 }

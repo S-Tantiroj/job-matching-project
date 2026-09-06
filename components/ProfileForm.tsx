@@ -94,21 +94,30 @@ export default function ProfileForm({
     const skills = parseSkillInput(skillText)
 
     setBusy(true)
-    const res = await fetch('/api/self-assessment', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ draft: { ...d, skills }, fileName }),
-    })
-    setBusy(false)
+    try {
+      const res = await fetch('/api/self-assessment', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ draft: { ...d, skills }, fileName }),
+      })
+      setBusy(false)
 
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      const fieldLabel = fieldToLabel(json.field)
-      const message = json.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่'
-      const displayText = fieldLabel ? `${fieldLabel}: ${message}` : message
-      return setError(displayText)
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        const fieldLabel = fieldToLabel(json.field)
+        const message = json.error ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่'
+        const displayText = fieldLabel ? `${fieldLabel}: ${message}` : message
+        return setError(displayText)
+      }
+      onSaved()
+    } catch {
+      // ความล้มเหลวระดับเครือข่าย (ออฟไลน์, การเชื่อมต่อหลุดกลางคัน) — ไม่งั้น busy
+      // จะค้าง true ตลอดไปและผู้ใช้ต้องรีโหลดหน้า ซึ่งทำลายร่างที่ยังไม่บันทึกทั้งหมด
+      // (ฟีเจอร์นี้ตั้งใจไม่มี autosave และไม่มีร่างในฐานข้อมูล) ตามแบบ upload
+      // ใน SelfAssessmentStart.tsx
+      setBusy(false)
+      setError('เชื่อมต่อเครือข่ายไม่สำเร็จ ข้อมูลที่กรอกยังอยู่ กรุณาลองใหม่อีกครั้ง')
     }
-    onSaved()
   }
 
   return (
@@ -239,9 +248,11 @@ export default function ProfileForm({
         {busy && <span className="faint" style={{ fontSize: 13 }}>อาจใช้เวลา 10–20 วินาที</span>}
       </div>
       {error && <p style={{ color: 'var(--bad)', margin: 0 }}>{error}</p>}
-      <p className="faint" style={{ fontSize: 12, margin: 0 }}>
-        แสดงเฉพาะรายการล่าสุดจากไฟล์ ถ้าขาดอะไรสำคัญเพิ่มเองได้
-      </p>
+      {fileName && (
+        <p className="faint" style={{ fontSize: 12, margin: 0 }}>
+          แสดงเฉพาะรายการล่าสุดจากไฟล์ ถ้าขาดอะไรสำคัญเพิ่มเองได้
+        </p>
+      )}
     </div>
   )
 }
