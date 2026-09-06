@@ -1,34 +1,38 @@
 import UserGuide from '@/components/help/UserGuide'
-import UatTable from '@/components/help/UatTable'
-import { UAT_DOC } from '@/lib/help/docMeta'
 import { CONTACT_EMAIL } from '@/lib/help/contact'
 
 export const metadata = {
   title: 'คู่มือการใช้งาน — Skouth',
-  description: 'คู่มือผู้ใช้และเอกสารทดสอบการยอมรับระบบ Skouth',
+  description: 'คู่มือการใช้งานระบบ Skouth',
 }
 
+// หน้านี้แสดงเฉพาะคู่มือผู้ใช้
+//
+// ตารางทดสอบการยอมรับ (UAT) ถูกเอาออกโดยตั้งใจ — เป็นเอกสารภายในสำหรับการส่งมอบงาน
+// ไม่ใช่สิ่งที่ผู้ใช้หรือผู้สนใจควรเห็น เนื้อหายังอยู่ที่ docs/uat/skouth-uat.md
+//
+// ปุ่มดาวน์โหลด PDF ก็ถูกเอาออกด้วย เพราะไฟล์เดิมมีตาราง UAT อยู่ข้างใน และ
+// **ไฟล์ใน public/ ถูกเสิร์ฟสาธารณะเสมอแม้ไม่มีลิงก์ชี้ไป** การซ่อนแค่ปุ่ม
+// จึงไม่ได้ซ่อนไฟล์ ต้องเอาไฟล์ออกจาก public/ ด้วย
+//
+// หน้านี้จึงเป็นคู่มือฉบับเดียว ไม่มีไฟล์ให้ดาวน์โหลด — ผู้ใช้ที่อยากได้ไฟล์
+// สั่งพิมพ์เป็น PDF จากเบราว์เซอร์ได้ (@media print ใน globals.css จัดหน้าให้)
+// ข้อดีคือไม่มีเนื้อหาสองชุดที่จะค่อยๆ ไม่ตรงกันเมื่อระบบเปลี่ยน
 export default function HelpPage() {
   return (
     <main>
-      <section className="pub-hero" style={{ padding: '48px 0 24px' }}>
+      <section className="pub-hero" style={{ padding: '48px 0 16px' }}>
         <h1 style={{ fontSize: 28 }}>คู่มือการใช้งาน</h1>
-        <p style={{ marginBottom: 0 }}>อ่านบนหน้านี้ได้เลย หรือดาวน์โหลดเป็นไฟล์ PDF ไปใช้</p>
+        <p style={{ marginBottom: 12 }}>วิธีใช้งานแต่ละหน้าในระบบ Skouth</p>
+        <p className="guide-print-hint">
+          ต้องการเก็บไว้อ่านออฟไลน์? กด <kbd>Ctrl</kbd>+<kbd>P</kbd> (macOS ใช้{' '}
+          <kbd>⌘</kbd>+<kbd>P</kbd>) แล้วเลือก “บันทึกเป็น PDF”
+        </p>
       </section>
 
-      <div className="pub-card" style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <h3>เอกสารคู่มือและแบบทดสอบการยอมรับ</h3>
-          <p>เวอร์ชัน {UAT_DOC.version} · ปรับปรุง {UAT_DOC.updatedAt}</p>
-        </div>
-        {/* ไม่ฝัง iframe PDF — บนเบราว์เซอร์มือถือหลายตัวแสดงไม่ได้หรือดาวน์โหลดทับ
-            และเนื้อหาซ้ำกับที่อยู่บนหน้านี้อยู่แล้ว */}
-        <a href={UAT_DOC.path} download className="btn btn-primary">ดาวน์โหลด PDF</a>
-        <a href={UAT_DOC.path} target="_blank" rel="noreferrer" className="btn">เปิดในแท็บใหม่</a>
-      </div>
-
-      <UserGuide />
-      <UatTable />
+      <section className="pub-section" style={{ paddingTop: 24 }}>
+        <UserGuide />
+      </section>
 
       <section className="pub-section" id="contact">
         <h2>ติดต่อเรา</h2>

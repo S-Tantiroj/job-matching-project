@@ -162,12 +162,52 @@ p { margin: 8px 0; }
 .pub-card p { font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.65; }
 .pub-note { background: var(--success-bg); border: 1px solid var(--success-border);
   border-radius: var(--radius-card); padding: 18px 20px; color: var(--success-text); }
+/* ใช้โดยหน้าเอกสารทางกฎหมายเท่านั้น คู่มือย้ายไปใช้ .guide-block แล้ว
+   (.pub-toc เดิมถูกลบทิ้ง — มีสารบัญสองชุดทำให้หยิบผิดชุด) */
 .pub-guide-block { margin-bottom: 26px; }
 .pub-guide-block h3 { font-size: 16px; margin: 0 0 8px; }
 .pub-guide-block ol { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.75; }
-.pub-toc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
-.pub-toc a { font-size: 13px; color: var(--text-muted); text-decoration: none;
-  border: 1px solid var(--border); border-radius: 99px; padding: 4px 11px; }
-.pub-toc a:hover { border-color: var(--accent); color: var(--accent); }
 .pub-footer { padding: 28px 0; border-top: 1px solid var(--border);
   font-size: 13px; color: var(--text-faint); }
+
+/* ---- คู่มือบนเว็บ ---- */
+/* ต้องมี .pub-hero นำหน้าด้วย ไม่งั้น `.pub-hero p` ซึ่งจำเพาะกว่าจะชนะ
+   แล้วคำแนะนำการพิมพ์จะตัวโตเท่าคำโปรยของหน้า */
+.guide-print-hint, .pub-hero .guide-print-hint {
+  font-size: 13px; color: var(--text-faint); margin: 0; }
+.guide-print-hint kbd { font-family: inherit; font-size: 12px; border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; margin: 0 1px; }
+.guide-layout { display: grid; grid-template-columns: 220px 1fr; gap: 32px; align-items: start; }
+.guide-toc { position: sticky; top: 72px; }
+.guide-toc-title { font-size: 12px; color: var(--text-faint); margin-bottom: 8px; }
+.guide-toc a { display: block; font-size: 13.5px; color: var(--text-muted);
+  padding: 5px 10px; border-left: 2px solid var(--border); text-decoration: none; }
+.guide-toc a:hover { color: var(--accent); border-left-color: var(--accent); text-decoration: none; }
+.guide-num { color: var(--text-faint); font-weight: 400; margin-right: 6px; }
+.guide-block { scroll-margin-top: 72px; margin-bottom: 30px; }
+.guide-block h3 { font-size: 17px; margin: 0 0 10px; }
+.guide-block ol { margin: 0; padding-left: 22px; font-size: 14.5px; line-height: 1.8; }
+.guide-block li { margin-bottom: 4px; }
+
+@media (max-width: 780px) {
+  .guide-layout { grid-template-columns: 1fr; gap: 16px; }
+  .guide-toc { position: static; }
+  .guide-toc a { display: inline-block; border-left: none; border: 1px solid var(--border);
+    border-radius: 999px; margin: 0 4px 6px 0; padding: 4px 11px; }
+}
+
+/* พิมพ์จากเบราว์เซอร์แทนการมีไฟล์ PDF ให้ดูแล — ผู้ใช้ได้ไฟล์ที่อ่านได้
+   โดยเราไม่ต้องรักษาเนื้อหาสองชุดให้ตรงกัน */
+@media print {
+  .pub-nav, .guide-toc, .pub-footer, .guide-print-hint { display: none !important; }
+  /* ปุ่มที่เหลือบนหน้าพิมพ์คือลิงก์อีเมลติดต่อ ซ่อน .btn ทั้งหมดจะทำให้
+     หัวข้อ "ติดต่อเรา" ในฉบับพิมพ์ไม่มีอีเมลอยู่ใต้มัน จึงทำให้แบนแทนที่จะซ่อน */
+  .btn { border: none; padding: 0; background: none; font-weight: 500; }
+  .pub-wrap { max-width: none; padding: 0; }
+  .guide-layout { display: block; }
+  .pub-hero { padding: 0 0 16px; text-align: left; }
+  .pub-section { border-top: none; padding: 0; }
+  .guide-block { break-inside: avoid; page-break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+  body { background: #fff; font-size: 12pt; }
+}
