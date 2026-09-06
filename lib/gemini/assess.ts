@@ -1,5 +1,6 @@
 import { getGemini } from './client'
-import type { CandidateInput } from '@/lib/ingest/normalize'
+import { computeYearsExperience } from '@/lib/ingest/normalize'
+import type { ProfileDraft } from '@/lib/self/profileDraft'
 import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape'
 
 // วิเคราะห์โปรไฟล์เป็นจุดแข็ง จุดอ่อน และสิ่งที่ควรพัฒนา ผลลัพธ์เป็นภาษาไทย
@@ -8,8 +9,10 @@ import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape
 // แยกจาก parsePdfProfile เพราะคนละธรรมชาติ — อันนั้นสกัดข้อเท็จจริง อันนี้ตัดสิน
 // แยกแล้วปรับ prompt ทีละตัวได้ และประเมินใหม่ได้จาก parsed_data ที่เก็บไว้
 // โดยไม่ต้องให้ผู้ใช้อัปโหลด PDF ซ้ำ
-export async function assessProfile(profile: CandidateInput): Promise<Assessment> {
-  const prompt = `วิเคราะห์โปรไฟล์ผู้สมัครต่อไปนี้ ตอบเป็น JSON เท่านั้น ทุกข้อความเป็นภาษาไทย
+
+// แยกการประกอบ prompt ออกมาเพื่อทดสอบเป็น unit ได้โดยไม่แตะเครือข่าย
+export function buildAssessPrompt(profile: ProfileDraft, yearsExperience: number): string {
+  return `วิเคราะห์โปรไฟล์ผู้สมัครต่อไปนี้ ตอบเป็น JSON เท่านั้น ทุกข้อความเป็นภาษาไทย
 
 {"strengths":["จุดแข็ง"],"weaknesses":["จุดที่ยังขาด"],"development":["สิ่งที่ควรพัฒนาต่อ"],"summary":"ภาพรวมสั้นๆ 1-2 ประโยค"}
 
@@ -17,12 +20,19 @@ export async function assessProfile(profile: CandidateInput): Promise<Assessment
 - strengths, weaknesses, development อย่างละ 2-4 ข้อ สั้นและเจาะจง
 - อ้างอิงจากข้อมูลในโปรไฟล์เท่านั้น ห้ามสมมติสิ่งที่ไม่ปรากฏ
 - ใช้น้ำเสียงให้กำลังใจและสร้างสรรค์ ไม่ตัดสินคุณค่าของบุคคล
+- ถ้ามีผลการเรียน (gpa) ให้พูดถึงได้ แต่อย่าเทียบข้ามสเกลที่ต่างกัน
+
+รวมประสบการณ์ทำงานประมาณ ${yearsExperience} ปี (คำนวณจากวันที่ในโปรไฟล์แล้ว ใช้ตัวเลขนี้ ไม่ต้องคำนวณเอง)
 
 โปรไฟล์: ${JSON.stringify(profile)}`
+}
+
+export async function assessProfile(profile: ProfileDraft): Promise<Assessment> {
+  const years = computeYearsExperience(profile.experience ?? [])
 
   const res = await getGemini().models.generateContent({
     model: 'gemini-flash-latest',
-    contents: prompt,
+    contents: buildAssessPrompt(profile, years),
     config: { responseMimeType: 'application/json' },
   })
 
