@@ -1,83 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
-import { getServerClient } from '@/lib/supabase/server'
-import { validateUpload } from '@/lib/self/validateUpload'
-import { parsePdfProfile } from '@/lib/gemini/parsePdf'
-import { assessProfile } from '@/lib/gemini/assess'
-import { buildEmbedText } from '@/lib/ingest/normalize'
-import { embedText } from '@/lib/gemini/embed'
+import { validateProfileDraft } from '@/lib/self/profileDraft'
+import { createSelfProfile } from '@/lib/self/createProfile'
 
-// POST /api/self-assessment  — FormData { file: <PDF> }
+// POST /api/self-assessment — JSON { draft: ProfileDraft, fileName?: string }
 // ทุก role ที่ล็อกอินใช้ได้ ไม่ต้อง gate ด้วย hasRole เพราะเป็นฟีเจอร์สำหรับทุกคน
 //
-// รับเป็น FormData ไม่ใช่ base64 ใน JSON แบบ route อื่นในแอป เพราะ base64 ทำให้ขนาด
-// โตขึ้น ~33% และ Vercel จำกัด request body ที่ 4.5MB — PDF 3.5MB ที่ควรส่งได้
-// จะกลายเป็น 4.7MB แล้วพังโดยไม่มีสัญญาณที่เดาถูก
+// เฟสที่สองของสองเฟส: รับร่างที่ผู้ใช้ **ตรวจและยืนยันแล้ว** ไปวิเคราะห์และบันทึก
+// ไฟล์ PDF อ่านไปแล้วที่ /api/self-assessment/parse route นี้จึงไม่รับไฟล์
+//
+// **สำคัญ: body มาจากเบราว์เซอร์ ไม่ได้มาจาก Gemini แล้ว** เดิมข้อมูลที่จะเขียนลงฐาน
+// มาจากโมเดลเท่านั้นจึงเชื่อได้ระดับหนึ่ง ตอนนี้ใครก็ยิง JSON ตรงเข้ามาได้โดยไม่ผ่าน
+// ฟอร์ม เช่นส่ง summary ยาวสิบล้านตัวอักษรให้เราจ่ายค่า embedding แทนเขา
+// validateProfileDraft คือด่านเดียวที่กันเรื่องนี้ — การจำกัดใน <input maxLength>
+// เป็นเรื่องประสบการณ์ผู้ใช้ ไม่ใช่การป้องกัน
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบใหม่' }, { status: 401 })
 
-  let file: File | null = null
+  let body: any
   try {
-    const form = await req.formData()
-    const f = form.get('file')
-    file = f instanceof File ? f : null
+    body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'กรุณาเลือกไฟล์ PDF' }, { status: 400 })
+    return NextResponse.json({ error: 'รูปแบบข้อมูลไม่ถูกต้อง' }, { status: 400 })
   }
 
-  const invalid = validateUpload(file ? { type: file.type, size: file.size } : null)
-  if (invalid) return NextResponse.json({ error: invalid }, { status: 400 })
+  const result = validateProfileDraft(body?.draft)
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message, field: result.field }, { status: 400 })
+  }
 
-  const pdfBase64 = Buffer.from(await file!.arrayBuffer()).toString('base64')
+  const fileName = typeof body?.fileName === 'string' ? body.fileName.slice(0, 255) : undefined
 
-  // ถ้าขั้นตอนใดล้ม ไม่เขียนอะไรลงฐานข้อมูลเลย — การเก็บ profile ที่ไม่มี embedding
-  // จะกลายเป็นข้อมูลเสียแบบเงียบที่ไม่โผล่ในการจัดอันดับงานโดยไม่มีใครรู้สาเหตุ
-  let profile, raw_text, assessment, embedding
   try {
-    const parsed = await parsePdfProfile(pdfBase64)
-    profile = parsed.profile
-    raw_text = parsed.raw_text
-    assessment = await assessProfile(profile)
-    embedding = await embedText(buildEmbedText(profile), 'RETRIEVAL_DOCUMENT')
+    // owner_id มาจาก session เท่านั้น ห้ามรับจาก body — validateProfileDraft
+    // ตัด owner_id ที่ปนมากับ draft ทิ้งไปแล้วด้วย
+    const id = await createSelfProfile(result.draft, session.userId, fileName)
+    return NextResponse.json({ id })
   } catch (e: any) {
-    // log ฝั่ง server เท่านั้น ไม่ส่งข้อความดิบให้ผู้ใช้
-    // ถ้าไม่ log ตรงนี้ ทุกความล้มเหลวจะกลายเป็นข้อความเดียวกันบนหน้าจอ
-    // และไม่มีทางรู้เลยว่าเป็นไฟล์ โมเดล หรือเครือข่าย
-    console.error('self-assessment upload failed:', e?.message ?? e)
+    console.error('self-assessment save failed:', e?.message ?? e)
 
-    // แยกกรณี "ผู้ให้บริการไม่ว่าง" ออกจาก "ไฟล์มีปัญหา"
-    // 503 UNAVAILABLE = ความจุฝั่ง Google ตึง, 429 = โควตาหมด
-    // ทั้งสองไม่เกี่ยวกับไฟล์เลย การบอกให้ผู้ใช้ไปตรวจไฟล์จึงเป็นการชี้ผิดทาง
     const msg = String(e?.message ?? '')
     const upstreamBusy = msg.includes('"code":503') || msg.includes('"code":429')
     if (upstreamBusy) {
+      // ฟอร์มยังอยู่ครบบนหน้าจอของผู้ใช้ กดวิเคราะห์ซ้ำได้เลยโดยไม่ต้องอ่าน PDF ใหม่
+      // ซึ่งเป็นขั้นที่แพงที่สุด — นี่คือสิ่งที่ flow เดิมทำไม่ได้
       return NextResponse.json(
-        { error: 'ระบบ AI ไม่ว่างชั่วคราว กรุณารอสักครู่แล้วลองใหม่ (ไฟล์ของคุณไม่มีปัญหา)' },
+        { error: 'ระบบ AI ไม่ว่างชั่วคราว ข้อมูลของคุณยังอยู่ กดวิเคราะห์อีกครั้งได้เลย' },
         { status: 503 }
       )
     }
-    return NextResponse.json(
-      { error: 'อ่านไฟล์ไม่สำเร็จ กรุณาตรวจว่าไฟล์ไม่เสียหายแล้วลองใหม่' },
-      { status: 502 }
-    )
-  }
-
-  const { data, error } = await getServerClient()
-    .from('self_profiles')
-    .insert({
-      owner_id: session.userId,
-      file_name: file!.name,
-      raw_text,
-      parsed_data: profile,
-      assessment,
-      embedding,
-    })
-    .select('id')
-    .single()
-
-  if (error || !data) {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาด กรุณาลองใหม่' }, { status: 500 })
   }
-  return NextResponse.json({ id: (data as any).id })
 }
