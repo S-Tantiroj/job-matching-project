@@ -5,7 +5,7 @@ import { getServerClient } from '@/lib/supabase/server'
 import { matchJobsForProfile } from '@/lib/self/matchJobs'
 import type { Assessment } from '@/lib/self/assessmentShape'
 import ScoreBadge from '@/components/ScoreBadge'
-import SelfAssessmentUpload from '@/components/SelfAssessmentUpload'
+import SelfAssessmentStart from '@/components/SelfAssessmentStart'
 import RoleScorePanel from '@/components/RoleScorePanel'
 
 export const dynamic = 'force-dynamic'
@@ -45,14 +45,15 @@ export default async function SelfAssessmentPage() {
       <main>
         <h1>ประเมินตัวเอง</h1>
         <p className="muted">
-          อัปโหลด resume เป็นไฟล์ PDF แล้ว AI จะช่วยวิเคราะห์จุดแข็ง จุดอ่อน
-          สิ่งที่ควรพัฒนา และงานในระบบที่เหมาะกับคุณ (ไฟล์เป็นภาษาไทยหรืออังกฤษก็ได้)
+          อัปโหลด resume หรือ CV เป็นไฟล์ PDF แล้ว AI จะอ่านข้อมูลมาให้ตรวจก่อน
+          เมื่อยืนยันแล้วจึงวิเคราะห์จุดแข็ง จุดอ่อน สิ่งที่ควรพัฒนา และงานที่เหมาะกับคุณ
+          ถ้าไม่มีไฟล์ กรอกข้อมูลเองก็ได้ (ไฟล์เป็นภาษาไทยหรืออังกฤษก็ได้)
         </p>
         <p className="faint" style={{ fontSize: 13 }}>
           ข้อมูลนี้เป็นของคุณคนเดียว ผู้ดูแลระบบและผู้ใช้คนอื่นมองไม่เห็น
           และจะไม่ถูกนำไปรวมกับฐานข้อมูลผู้สมัคร
         </p>
-        <SelfAssessmentUpload label="อัปโหลดและวิเคราะห์" />
+        <SelfAssessmentStart label="อัปโหลดและตรวจข้อมูล" />
       </main>
     )
   }
@@ -77,6 +78,16 @@ export default async function SelfAssessmentPage() {
         {skills.length > 0 && (
           <div className="row" style={{ flexWrap: 'wrap', marginTop: 10 }}>
             {skills.map((s, i) => <span key={`${s}-${i}`} className="chip">{s}</span>)}
+          </div>
+        )}
+        {Array.isArray(parsed.education) && parsed.education.length > 0 && (
+          <div style={{ marginTop: 10 }}>
+            {parsed.education.map((e: any, i: number) => (
+              <div key={i} className="faint" style={{ fontSize: 13 }}>
+                {[e.degree, e.institution, e.country].filter(Boolean).join(' · ')}
+                {e.gpa ? ` · ผลการเรียน ${e.gpa}` : ''}
+              </div>
+            ))}
           </div>
         )}
         {p.file_name && (
@@ -122,7 +133,7 @@ export default async function SelfAssessmentPage() {
       <RoleScorePanel profileId={p.id} />
 
       <div className="section-header"><h2>อัปโหลดใหม่</h2></div>
-      <SelfAssessmentUpload label="อัปโหลดไฟล์ใหม่" />
+      <SelfAssessmentStart label="อัปโหลดไฟล์ใหม่" />
     </main>
   )
 }

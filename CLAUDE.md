@@ -192,8 +192,23 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-20-self-assessment*`
 - [x] Upload is `FormData`, NOT base64 JSON like the other routes — base64 inflates
       ~33% and Vercel caps bodies at 4.5MB. If any Gemini/embed step fails, nothing
       is written; a profile with a null embedding would silently never rank.
+- [x] **Rebuilt as two phases** (`2026-09-06-self-assessment-template`) —
+      `POST /api/self-assessment/parse` (FormData `{ file }`) only reads the PDF
+      and returns a draft; it writes nothing. `POST /api/self-assessment` (JSON
+      `{ draft, fileName? }`) takes a **user-confirmed** draft, assesses, embeds,
+      and inserts in one call. `components/SelfAssessmentStart.tsx` (two visible
+      entry points — upload or "กรอกข้อมูลด้วยตัวเอง", not manual entry hidden
+      behind an upload failure) hands the draft to `components/ProfileForm.tsx`
+      for review before anything is saved. `raw_text` is no longer written
+      (column stays, migration is additive) — the user now confirms the data
+      themselves, so that provenance trail lost its purpose.
 - [x] `/self-assessment` page + `matchJobsForProfile`. Ranking makes ZERO LLM calls;
       role scores cache in `resume_assessments` by `requirement_hash`.
+- [x] `ProfileDraft` (`lib/self/profileDraft.ts`) adds per-education `gpa` (string,
+      not number — scales differ and Thai honors text like "เกียรตินิยมอันดับหนึ่ง"
+      is valid). **`gpa` must never enter `buildEmbedText`** — that function is
+      shared with the candidate-ingest side, and touching it changes `embed_hash`
+      for every row in `candidates`, forcing a full re-embed.
 - **Privacy is structural:** `self_profiles` is a separate table from `candidates`,
   so uploaded data cannot reach recruiter search. Every route uses the service-role
   client, which bypasses RLS — `.eq('owner_id', session.userId)` IS the access
