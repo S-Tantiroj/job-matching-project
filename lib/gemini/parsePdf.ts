@@ -1,24 +1,109 @@
 import { getGemini } from './client'
-import type { CandidateInput } from '@/lib/ingest/normalize'
+import {
+  validateProfileDraft,
+  PARSE_ENTRY_LIMIT,
+  LIMITS,
+  type ProfileDraft,
+} from '@/lib/self/profileDraft'
 
-export type ParsedPdf = { profile: CandidateInput; raw_text: string }
-
-// อ่าน resume PDF ด้วย Gemini โดยตรง (ไม่ต้องมีไลบรารีอ่าน PDF) รองรับไฟล์ที่สแกน
-// มาเป็นรูปด้วย เพราะโมเดลมองเห็นหน้ากระดาษจริง
+// อ่าน resume/CV PDF ด้วย Gemini โดยตรง (ไม่ต้องมีไลบรารีอ่าน PDF) รองรับไฟล์ที่
+// สแกนมาเป็นรูปด้วย เพราะโมเดลมองเห็นหน้ากระดาษจริง
 //
-// ไฟล์ต้นทางเป็นภาษาอะไรก็ได้ แต่ค่าในโปรไฟล์ต้องออกมาเป็นภาษาอังกฤษ เพราะ embedding
-// ต้องอยู่สเปซเดียวกับตาราง jobs ที่เก็บเป็นอังกฤษ ส่วน raw_text เก็บตามต้นฉบับ
-export async function parsePdfProfile(pdfBase64: string): Promise<ParsedPdf> {
-  const prompt = `Read this resume PDF and return JSON only, matching this schema:
-{"profile":{"full_name":"","headline":"","location":"","summary":"","skills":[],"education":[{"institution":"","country":"","degree":"","field_of_study":"","start_year":0,"end_year":0}],"experience":[{"company":"","title":"","start_date":"","end_date":"","description":""}]},"raw_text":""}
+// ผลที่ได้เป็นเพียง "ร่าง" ผู้ใช้ต้องตรวจและยืนยันก่อนถึงจะถูกวิเคราะห์และบันทึก
+// ฟังก์ชันนี้จึงไม่แตะฐานข้อมูลเลย
+const PROMPT = `Read this resume/CV PDF and return JSON only, matching this schema:
+{"profile":{"full_name":"","headline":"","industry":"","location":"","summary":"","skills":[],"education":[{"institution":"","country":"","degree":"","field_of_study":"","start_year":0,"end_year":0,"gpa":""}],"experience":[{"company":"","title":"","start_date":"","end_date":"","description":""}]}}
 
 Rules:
 - The source document may be in Thai, English, or a mix. Handle any language.
-- Output ALL values inside "profile" in ENGLISH. Translate or romanize Thai (e.g. a Thai name becomes "Somchai Jaidee", a Thai university becomes its English name).
-- "raw_text" must be the text of the document AS IT APPEARS, in its original language. Do NOT translate raw_text.
-- Dates in "experience" must be strict ISO "YYYY-MM-DD". Use null for end_date of a current role.
-- Omit a field or use null when the resume does not state it. Never invent facts.`
+- Output ALL values in ENGLISH. Translate or romanize Thai (e.g. a Thai name becomes "Somchai Jaidee", a Thai university becomes its English name).
+- "industry" is the sector the person works in, e.g. "Banking", "Healthcare", "Software". Infer it from their roles. Omit if genuinely unclear.
+- "gpa" is a STRING, copied as written. Keep the scale if stated ("3.45/4.00"). Honours wording such as "First Class Honours" is a valid value. Never convert between scales.
+- Return AT MOST ${PARSE_ENTRY_LIMIT} education entries and AT MOST ${PARSE_ENTRY_LIMIT} experience entries — the MOST RECENT ones. Drop older entries.
+- Dates in "experience" must be strict ISO "YYYY-MM-DD". Use null for end_date of a current role. If only a year is stated, use the first of January ("2020-01-01").
+- NEVER extract date of birth, age, religion, marital status, nationality, race, height, weight, health information, national ID number, or any photograph. Omit them entirely, including from "summary". They are not relevant to job matching.
+- Omit a field or use null when the document does not state it. Never invent facts.
+- Do NOT return the full text of the document. Only the structured fields above.`
 
+// แยกการแกะคำตอบออกจากการเรียกเครือข่าย เพื่อให้ทดสอบเป็น unit ได้
+export function parseProfileResponse(text: string): ProfileDraft {
+  const cleaned = text.replace(/```json|```/g, '').trim()
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
+  let parsed: any
+  try {
+    parsed = JSON.parse(start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned)
+  } catch {
+    throw new Error('gemini returned unparseable JSON for the PDF')
+  }
+
+  const profile = parsed?.profile
+  if (!profile || typeof profile !== 'object') {
+    throw new Error('gemini could not extract a profile from the PDF')
+  }
+
+  // ผ่านตัวตรวจตัวเดียวกับที่ route ใช้ ทำให้ร่างจาก AI กับร่างที่คนกรอกเอง
+  // อยู่ภายใต้กติกาเดียวกัน และฟิลด์แปลกปลอม (รวมถึง raw_text) ถูกตัดทิ้งที่นี่
+  const r = validateProfileDraft(coerceForReview(profile))
+  if (!r.ok) throw new Error(`gemini profile failed validation at ${r.field}`)
+  return r.draft
+}
+
+// ผ่อนปรนกับผลจากโมเดลก่อนส่งเข้าตัวตรวจ — **ตั้งใจให้ต่างจากด่านฝั่ง route**
+//
+// ด่านของ route เข้มงวดเพราะผู้ส่งคือเบราว์เซอร์ที่อาจเป็นใครก็ได้ ส่วนตรงนี้ผู้ส่งคือ
+// โมเดลของเราเอง และผลจะถูกมนุษย์ตรวจต่ออีกชั้นอยู่แล้ว
+//
+// ถ้าไม่ผ่อนปรน วันที่ผิดรูปเพียงตัวเดียว — ซึ่งโมเดลพลาดบ่อยแม้ prompt จะสั่งไว้ —
+// จะทำให้ผู้ใช้เจอ "อ่านไฟล์ไม่สำเร็จ" ทั้งที่อ่านได้ครบ นั่นคือการทิ้งงานที่สำเร็จแล้ว
+// ซึ่งเป็นสิ่งเดียวกับที่ flow นี้ตั้งใจเลิกทำ ปล่อยช่องว่างให้ผู้ใช้เติมดีกว่ามาก
+function coerceForReview(p: any): any {
+  const cut = (v: unknown, max: number) =>
+    typeof v === 'string' ? v.slice(0, max) : undefined
+  const iso = (v: unknown) =>
+    typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined
+  const yr = (v: unknown) => {
+    const n = Number(v)
+    return Number.isInteger(n) && n >= LIMITS.yearMin && n <= LIMITS.yearMax ? n : undefined
+  }
+
+  return {
+    full_name: cut(p.full_name, LIMITS.full_name),
+    headline: cut(p.headline, LIMITS.headline),
+    industry: cut(p.industry, LIMITS.industry),
+    location: cut(p.location, LIMITS.location),
+    summary: cut(p.summary, LIMITS.summary),
+    education: (Array.isArray(p.education) ? p.education : [])
+      .slice(0, LIMITS.education)
+      .filter((e: unknown) => e && typeof e === 'object')
+      .map((e: any) => ({
+        institution: cut(e.institution, LIMITS.institution),
+        country: cut(e.country, LIMITS.country),
+        degree: cut(e.degree, LIMITS.degree),
+        field_of_study: cut(e.field_of_study, LIMITS.field_of_study),
+        // gpa เป็น string เสมอ โมเดลอาจคืนเป็น number มา จึงแปลงก่อนตัด
+        gpa: cut(e.gpa == null ? undefined : String(e.gpa), LIMITS.gpa),
+        start_year: yr(e.start_year),
+        end_year: yr(e.end_year),
+      })),
+    experience: (Array.isArray(p.experience) ? p.experience : [])
+      .slice(0, LIMITS.experience)
+      .filter((e: unknown) => e && typeof e === 'object')
+      .map((e: any) => ({
+        company: cut(e.company, LIMITS.company),
+        title: cut(e.title, LIMITS.title),
+        description: cut(e.description, LIMITS.description),
+        start_date: iso(e.start_date),
+        end_date: iso(e.end_date),
+      })),
+    skills: (Array.isArray(p.skills) ? p.skills : [])
+      .slice(0, LIMITS.skills)
+      .map((s: unknown) => cut(s, LIMITS.skill))
+      .filter(Boolean),
+  }
+}
+
+export async function parsePdfProfile(pdfBase64: string): Promise<ProfileDraft> {
   const res = await getGemini().models.generateContent({
     model: 'gemini-flash-latest',
     contents: [
@@ -27,30 +112,12 @@ Rules:
         parts: [
           // เอกสาร Gemini แนะนำให้วาง part ของไฟล์ก่อนข้อความ prompt
           { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
-          { text: prompt },
+          { text: PROMPT },
         ],
       },
     ],
     config: { responseMimeType: 'application/json' },
   })
 
-  const text = (res.text ?? '').replace(/```json|```/g, '').trim()
-  const start = text.indexOf('{')
-  const end = text.lastIndexOf('}')
-  let parsed: any
-  try {
-    parsed = JSON.parse(start >= 0 && end > start ? text.slice(start, end + 1) : text)
-  } catch {
-    throw new Error('gemini returned unparseable JSON for the PDF')
-  }
-
-  const profile = parsed?.profile
-  if (!profile || typeof profile !== 'object' || !String(profile.full_name ?? '').trim()) {
-    throw new Error('gemini could not extract a profile from the PDF')
-  }
-
-  return {
-    profile: { ...profile, source: 'upload' } as CandidateInput,
-    raw_text: String(parsed.raw_text ?? ''),
-  }
+  return parseProfileResponse(res.text ?? '')
 }
