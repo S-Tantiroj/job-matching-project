@@ -1,6 +1,103 @@
 'use client'
 import { useState } from 'react'
 import { EMPTY_DRAFT, LIMITS, type ProfileDraft, type DraftEducation } from '@/lib/self/profileDraft'
+import {
+  EDUCATION_LEVELS,
+  INDUSTRY_GROUPS,
+  choiceLabel,
+  isLegacyChoice,
+  type Choice,
+} from '@/lib/self/taxonomy'
+import { MONTHS_TH, toMonthYear, fromMonthYear, yearOptions } from '@/lib/self/monthYear'
+
+// dropdown ที่ยอมให้ค่าเดิมที่ไม่อยู่ในรายการอยู่ต่อได้
+//
+// โปรไฟล์ที่บันทึกไว้ก่อนมีรายการตัวเลือก (เช่น degree "MS" หรือ industry "Banking")
+// จะไม่ตรงกับ option ไหนเลย ถ้าปล่อยไว้เฉยๆ select จะเด้งไปค่าว่างแล้วผู้ใช้กดบันทึก
+// ทับข้อมูลเดิมโดยไม่รู้ว่าเพิ่งลบอะไรไป จึงใส่ option พิเศษกำกับว่าเป็นค่าเดิม
+// ให้เห็นกับตาว่ายังอยู่ และเลือกค่าใหม่ทับได้เมื่อพร้อม
+function ChoiceSelect({
+  value,
+  choices,
+  placeholder,
+  onChange,
+}: {
+  value: string | undefined
+  choices: Choice[]
+  placeholder: string
+  onChange: (v: string | undefined) => void
+}) {
+  const current = value ?? ''
+  const isLegacy = isLegacyChoice(value, choices)
+  return (
+    <select
+      className="select"
+      value={current}
+      onChange={(e) => onChange(e.target.value || undefined)}
+    >
+      <option value="">{placeholder}</option>
+      {isLegacy && <option value={current}>ค่าเดิม: {current}</option>}
+      {choices.map((c) => (
+        <option key={c.value} value={c.value}>
+          {choiceLabel(c)}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+// ช่องเดือน/ปี — ไม่ใช้ <input type="date"> เพราะเบราว์เซอร์เลือกรูปแบบตาม locale
+// เครื่องที่ตั้งเป็นอังกฤษจึงขึ้น MM/DD/YYYY ซึ่งอ่านสลับกับ DD/MM/YYYY ได้ง่ายมาก
+//
+// **ถ้าผู้ใช้ไม่แตะเลย ค่าเดิมถูกส่งกลับเหมือนเดิมทุกตัวอักษร** รวมถึงแถวเก่าที่มี
+// วันจริงอยู่ (2025-04-15) — จะเปลี่ยนเป็นวันที่ 01 ก็ต่อเมื่อเขาเลือกใหม่เท่านั้น
+// การเขียนทับค่าเดิมเงียบๆ ตอนบันทึกเรื่องอื่นเป็นการแก้ข้อมูลโดยเจ้าตัวไม่ได้สั่ง
+function MonthYearPicker({
+  value,
+  label,
+  onChange,
+}: {
+  value: string | undefined
+  label: string
+  onChange: (v: string | undefined) => void
+}) {
+  const my = toMonthYear(value)
+  const years = yearOptions()
+  return (
+    <div className="row" style={{ gap: 6, flex: 1 }}>
+      <select
+        className="select"
+        aria-label={`${label} — เดือน`}
+        value={my?.month ?? ''}
+        onChange={(e) =>
+          onChange(fromMonthYear(Number(e.target.value) || undefined, my?.year))
+        }
+      >
+        <option value="">{label} — เดือน</option>
+        {MONTHS_TH.map((m, i) => (
+          <option key={m} value={i + 1}>
+            {m}
+          </option>
+        ))}
+      </select>
+      <select
+        className="select"
+        aria-label={`${label} — ปี`}
+        value={my?.year ?? ''}
+        onChange={(e) =>
+          onChange(fromMonthYear(my?.month, Number(e.target.value) || undefined))
+        }
+      >
+        <option value="">ปี</option>
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
 
 type Exp = NonNullable<ProfileDraft['experience']>[number]
 
@@ -29,7 +126,7 @@ export function fieldToLabel(field: string | undefined): string {
     education: 'การศึกษา',
     'education.institution': 'การศึกษา › สถาบัน',
     'education.country': 'การศึกษา › ประเทศ',
-    'education.degree': 'การศึกษา › วุฒิ',
+    'education.degree': 'การศึกษา › ระดับการศึกษา',
     'education.field_of_study': 'การศึกษา › สาขา',
     'education.gpa': 'การศึกษา › ผลการเรียน',
     'education.start_year': 'การศึกษา › ปีเริ่ม',
@@ -143,12 +240,11 @@ export default function ProfileForm({
           onChange={(e) => set({ headline: e.target.value })}
           placeholder="ตำแหน่งย่อ เช่น Senior Data Scientist"
         />
-        <input
-          className="input"
-          maxLength={LIMITS.industry}
-          value={d.industry ?? ''}
-          onChange={(e) => set({ industry: e.target.value })}
-          placeholder="อุตสาหกรรม เช่น Banking, Healthcare"
+        <ChoiceSelect
+          value={d.industry}
+          choices={INDUSTRY_GROUPS}
+          placeholder="เลือกกลุ่มอุตสาหกรรม"
+          onChange={(v) => set({ industry: v })}
         />
         <input
           className="input"
@@ -171,8 +267,12 @@ export default function ProfileForm({
                   onChange={(ev) => setEdu(i, { country: ev.target.value })} placeholder="ประเทศ" />
               </div>
               <div className="row">
-                <input className="input" maxLength={LIMITS.degree} value={e.degree ?? ''}
-                  onChange={(ev) => setEdu(i, { degree: ev.target.value })} placeholder="วุฒิ เช่น MS" />
+                <ChoiceSelect
+                  value={e.degree}
+                  choices={EDUCATION_LEVELS}
+                  placeholder="เลือกระดับการศึกษา"
+                  onChange={(v) => setEdu(i, { degree: v })}
+                />
                 <input className="input" maxLength={LIMITS.field_of_study} value={e.field_of_study ?? ''}
                   onChange={(ev) => setEdu(i, { field_of_study: ev.target.value })} placeholder="สาขา" />
               </div>
@@ -210,10 +310,16 @@ export default function ProfileForm({
                   onChange={(ev) => setExp(i, { company: ev.target.value })} placeholder="บริษัท" />
               </div>
               <div className="row">
-                <input className="input" type="date" value={e.start_date ?? ''}
-                  onChange={(ev) => setExp(i, { start_date: ev.target.value || undefined })} />
-                <input className="input" type="date" value={e.end_date ?? ''}
-                  onChange={(ev) => setExp(i, { end_date: ev.target.value || undefined })} />
+                <MonthYearPicker
+                  value={e.start_date}
+                  label="เริ่ม"
+                  onChange={(v) => setExp(i, { start_date: v })}
+                />
+                <MonthYearPicker
+                  value={e.end_date}
+                  label="สิ้นสุด"
+                  onChange={(v) => setExp(i, { end_date: v })}
+                />
                 <button className="btn btn-ghost" onClick={() => set({ experience: exp.filter((_, j) => j !== i) })}>ลบ</button>
               </div>
               <textarea className="textarea" rows={2} maxLength={LIMITS.description} value={e.description ?? ''}

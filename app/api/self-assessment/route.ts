@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { validateProfileDraft } from '@/lib/self/profileDraft'
 import { createSelfProfile } from '@/lib/self/createProfile'
-import { isTransient } from '@/lib/gemini/withTimeout'
+import { isTransient, isServiceBlocked } from '@/lib/gemini/withTimeout'
 
 // POST /api/self-assessment — JSON { draft: ProfileDraft, fileName?: string }
 // ทุก role ที่ล็อกอินใช้ได้ ไม่ต้อง gate ด้วย hasRole เพราะเป็นฟีเจอร์สำหรับทุกคน
@@ -43,6 +43,19 @@ export async function POST(req: NextRequest) {
 
     // timeout (withTimeout ตัดคำขอที่ค้างนาน) ก็เป็นความล้มเหลวชั่วคราวเหมือน 503/429 —
     // ใช้ isTransient ตัวเดียวกับ analyze.ts และ extractFilters.ts แทนการเช็คสตริงเอง
+    // ต้องเช็คก่อน isTransient และก่อนข้อความ "กรุณาลองใหม่" ที่ท้ายฟังก์ชัน —
+    // เมื่อบัญชีถูกปฏิเสธ กดกี่ครั้งก็ไม่สำเร็จจนกว่าจะแก้ที่ฝั่งบัญชี
+    if (isServiceBlocked(e)) {
+      return NextResponse.json(
+        {
+          error:
+            'ระบบ AI ใช้งานไม่ได้ในขณะนี้เนื่องจากปัญหาการเข้าถึงบริการ ข้อมูลของคุณยังอยู่ ' +
+            'แต่การกดซ้ำจะยังไม่สำเร็จจนกว่าผู้ดูแลระบบจะแก้ไข',
+        },
+        { status: 503 }
+      )
+    }
+
     if (isTransient(e)) {
       // ฟอร์มยังอยู่ครบบนหน้าจอของผู้ใช้ กดวิเคราะห์ซ้ำได้เลยโดยไม่ต้องอ่าน PDF ใหม่
       // ซึ่งเป็นขั้นที่แพงที่สุด — นี่คือสิ่งที่ flow เดิมทำไม่ได้

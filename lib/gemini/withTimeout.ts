@@ -25,3 +25,23 @@ export function isTransient(e: unknown): boolean {
   const s = String((e as any)?.message ?? e)
   return s.includes('503') || s.includes('429') || s.includes('UNAVAILABLE') || s.includes('timeout')
 }
+
+// บัญชีหรือคีย์ใช้ไม่ได้ — คนละเรื่องกับ "ไม่ว่างชั่วคราว" และคนละเรื่องกับ "ไฟล์มีปัญหา"
+//
+// เจอจริงเมื่อ 2026-09-07: Gemini ตอบ 403 PERMISSION_DENIED "Your project has been
+// denied access" ซึ่งเป็นการที่ Google ตั้งสถานะโปรเจกต์เป็น Restricted ไม่ใช่โควตาหมด
+// ตอนนั้นโค้ดจัดมันลงถังสุดท้ายแล้วบอกผู้ใช้ว่า "อ่านไฟล์ไม่สำเร็จ กรุณาตรวจว่าไฟล์
+// ไม่เสียหาย" — ผู้ใช้จึงไปนั่งแก้ไฟล์ที่ไม่ได้ผิดอะไรเลย ส่วนฝั่งบันทึกบอกว่า
+// "กรุณาลองใหม่" ทั้งที่กดกี่ครั้งก็ไม่มีวันสำเร็จจนกว่าจะแก้ที่บัญชี
+//
+// **ห้ามลองใหม่อัตโนมัติเมื่อเจอกรณีนี้** การลองซ้ำไม่ช่วยอะไรและทำให้ผู้ใช้รอนานขึ้น
+export function isServiceBlocked(e: unknown): boolean {
+  const s = String((e as any)?.message ?? e)
+  return (
+    s.includes('PERMISSION_DENIED') ||
+    s.includes('UNAUTHENTICATED') ||
+    s.includes('API key not valid') ||
+    s.includes('"code":403') ||
+    s.includes('"code":401')
+  )
+}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { validateUpload } from '@/lib/self/validateUpload'
 import { parsePdfProfile } from '@/lib/gemini/parsePdf'
-import { isTransient } from '@/lib/gemini/withTimeout'
+import { isTransient, isServiceBlocked } from '@/lib/gemini/withTimeout'
 
 // POST /api/self-assessment/parse — FormData { file: <PDF> }
 //
@@ -51,6 +51,20 @@ export async function POST(req: NextRequest) {
     // ตึง, 429 = โควตาหมด, timeout = withTimeout ตัดคำขอที่ค้างนาน ทั้งสามอย่าง
     // ไม่เกี่ยวกับไฟล์ การบอกให้ไปตรวจไฟล์คือการชี้ผิดทาง ใช้ isTransient ตัวเดียวกับ
     // ที่ analyze.ts และ extractFilters.ts ใช้ แทนการเช็คสตริงเองซึ่งไม่รู้จัก timeout
+    // ต้องเช็คก่อน isTransient — บัญชีถูกปฏิเสธไม่ใช่ความล้มเหลวชั่วคราว
+    // บอกให้ "รอสักครู่แล้วลองใหม่" กับกรณีนี้คือการหลอกให้ผู้ใช้รอสิ่งที่ไม่มีวันมา
+    if (isServiceBlocked(e)) {
+      return NextResponse.json(
+        {
+          error:
+            'ระบบ AI ใช้งานไม่ได้ในขณะนี้เนื่องจากปัญหาการเข้าถึงบริการ ไม่ใช่ปัญหาที่ไฟล์ของคุณ ' +
+            'กรุณาแจ้งผู้ดูแลระบบ ระหว่างนี้กรอกข้อมูลเองได้',
+          canFallback: true,
+        },
+        { status: 503 }
+      )
+    }
+
     if (isTransient(e)) {
       return NextResponse.json(
         {

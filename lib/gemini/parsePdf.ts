@@ -6,22 +6,29 @@ import {
   LIMITS,
   type ProfileDraft,
 } from '@/lib/self/profileDraft'
+import { EDUCATION_LEVELS, INDUSTRY_GROUPS } from '@/lib/self/taxonomy'
 
 // อ่าน resume/CV PDF ด้วย Gemini โดยตรง (ไม่ต้องมีไลบรารีอ่าน PDF) รองรับไฟล์ที่
 // สแกนมาเป็นรูปด้วย เพราะโมเดลมองเห็นหน้ากระดาษจริง
 //
 // ผลที่ได้เป็นเพียง "ร่าง" ผู้ใช้ต้องตรวจและยืนยันก่อนถึงจะถูกวิเคราะห์และบันทึก
 // ฟังก์ชันนี้จึงไม่แตะฐานข้อมูลเลย
+// รายการค่าที่ยอมรับถูกฉีดเข้า prompt จากไฟล์เดียวกับที่ฟอร์มใช้ ถ้าเพิ่ม/ลบตัวเลือก
+// ที่ taxonomy.ts prompt จะตามเองทันที ไม่ต้องไล่แก้สองที่แล้วลืมที่หนึ่ง
+const EDU_VALUES = EDUCATION_LEVELS.map((c) => `"${c.value}"`).join(', ')
+const IND_VALUES = INDUSTRY_GROUPS.map((c) => `"${c.value}"`).join(', ')
+
 const PROMPT = `Read this resume/CV PDF and return JSON only, matching this schema:
 {"profile":{"full_name":"","headline":"","industry":"","location":"","summary":"","skills":[],"education":[{"institution":"","country":"","degree":"","field_of_study":"","start_year":0,"end_year":0,"gpa":""}],"experience":[{"company":"","title":"","start_date":"","end_date":"","description":""}]}}
 
 Rules:
 - The source document may be in Thai, English, or a mix. Handle any language.
 - Output ALL values in ENGLISH. Translate or romanize Thai (e.g. a Thai name becomes "Somchai Jaidee", a Thai university becomes its English name).
-- "industry" is the sector the person works in, e.g. "Banking", "Healthcare", "Software". Infer it from their roles. Omit if genuinely unclear.
+- "industry" MUST be EXACTLY one of these values, copied verbatim: ${IND_VALUES}. Infer the closest one from their roles and employers. If none genuinely fits, omit the field — do NOT invent a new value or return a sub-industry.
+- "degree" MUST be EXACTLY one of these values, copied verbatim: ${EDU_VALUES}. Map what the document says onto the closest one ("BSc"/"B.E." -> "Bachelor's Degree", "MS"/"M.Eng." -> "Master's Degree", "PhD" -> "Doctoral Degree", Thai "ปวช." -> "Vocational Certificate", "ปวส." -> "High Vocational Certificate"). Put the subject in "field_of_study", NOT in "degree". If the level is genuinely unclear, omit "degree".
 - "gpa" is a STRING, copied as written. Keep the scale if stated ("3.45/4.00"). Honours wording such as "First Class Honours" is a valid value. Never convert between scales.
 - Return AT MOST ${PARSE_ENTRY_LIMIT} education entries and AT MOST ${PARSE_ENTRY_LIMIT} experience entries — the MOST RECENT ones. Drop older entries.
-- Dates in "experience" must be strict ISO "YYYY-MM-DD". Use null for end_date of a current role. If only a year is stated, use the first of January ("2020-01-01").
+- Dates in "experience" must be strict ISO "YYYY-MM-DD" and the DAY MUST ALWAYS BE 01 — only the month and year are used, e.g. "2020-03-01". Use null for end_date of a current role. If only a year is stated, use January ("2020-01-01").
 - NEVER extract date of birth, age, religion, marital status, nationality, race, height, weight, health information, national ID number, or any photograph. Omit them entirely, including from "summary". They are not relevant to job matching.
 - Omit a field or use null when the document does not state it. Never invent facts.
 - Do NOT return the full text of the document. Only the structured fields above.`

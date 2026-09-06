@@ -209,6 +209,24 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-20-self-assessment*`
       is valid). **`gpa` must never enter `buildEmbedText`** — that function is
       shared with the candidate-ingest side, and touching it changes `embed_hash`
       for every row in `candidates`, forcing a full re-embed.
+- [x] **ตัวเลือกในฟอร์ม** (`lib/self/taxonomy.ts`) — ระดับการศึกษา 6 ระดับ และกลุ่ม
+      อุตสาหกรรม **20 กลุ่มบนสุดของ LinkedIn Industry Codes V2** (ไม่ใช่ 434 รายการย่อย)
+      **`value` เป็นอังกฤษ `label` เป็นไทยสำหรับแสดงเท่านั้น** — value คือสิ่งที่เข้า
+      `buildEmbedText` ซึ่งอยู่สเปซเดียวกับตาราง `jobs` เก็บไทยแล้วเวกเตอร์จะไปกอง
+      คนละมุมและจับคู่งานแย่ลงโดยไม่มีอาการ ค่ารายการเดียวกันนี้ถูกฉีดเข้า prompt ของ
+      `parsePdf.ts` ด้วย จึงแก้ที่ `taxonomy.ts` ที่เดียว
+      **ตัวตรวจฝั่งเซิร์ฟเวอร์ยังรับค่าอิสระเหมือนเดิมโดยตั้งใจ** — ถ้าบังคับให้ตรงรายการ
+      โปรไฟล์เก่าที่เก็บ "MS"/"Banking" ไว้จะบันทึกไม่ผ่านทันที ฟอร์มจึงแสดงค่าเดิมเป็น
+      option "ค่าเดิม: X" (`isLegacyChoice`) แทนการเด้งเป็นว่างแล้วให้ผู้ใช้ทับโดยไม่รู้ตัว
+- [x] **วันที่ประสบการณ์เหลือแค่เดือน/ปี** (`lib/self/monthYear.ts`) — `<input type="date">`
+      ให้เบราว์เซอร์เลือกรูปแบบตาม locale เครื่องภาษาอังกฤษจึงขึ้น MM/DD/YYYY ที่คนไทย
+      อ่านสลับกับ DD/MM/YYYY ได้ง่าย และบังคับรูปแบบไม่ได้ ค่าที่เก็บยังเป็น ISO เหมือนเดิม
+      ของใหม่ลงวันที่ 01 เสมอ **แถวเก่าที่มีวันจริงจะไม่ถูกเขียนทับถ้าผู้ใช้ไม่แตะช่องนั้น**
+- [x] **403 PERMISSION_DENIED มีถังของตัวเอง** (`isServiceBlocked` ใน `withTimeout.ts`)
+      เจอจริง 2026-09-07: Google ตั้งสถานะโปรเจกต์เป็น Restricted แล้ว Gemini ตอบ 403
+      ตอนนั้นโค้ดจัดมันเป็น "ไฟล์มีปัญหา" แล้วบอกผู้ใช้ให้ไปตรวจไฟล์ที่ไม่ได้ผิดอะไร
+      **ห้ามลองใหม่อัตโนมัติกับกรณีนี้** และต้องเช็คก่อน `isTransient` เสมอ
+
 - **Privacy is structural:** `self_profiles` is a separate table from `candidates`,
   so uploaded data cannot reach recruiter search. Every route uses the service-role
   client, which bypasses RLS — `.eq('owner_id', session.userId)` IS the access
