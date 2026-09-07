@@ -51,3 +51,19 @@ export function buildJobRequirementText(j: JobInput): string {
   parts.push(`Description: ${j.description}`)
   return parts.join('. ')
 }
+
+// เทียบว่าการแก้งานครั้งนี้กระทบอะไรบ้าง ใช้ตัดสินสองเรื่องคนละเรื่อง:
+//
+//   embedTextChanged       -> ต้องเรียก Gemini คำนวณ embedding ใหม่ไหม (เสียเงิน)
+//   requirementTextChanged -> คะแนนเชิงลึกที่ cache ไว้ใช้ไม่ได้แล้วไหม
+//
+// **ทั้งสองตัวไม่ซ้ำซ้อนกัน** — `category` อยู่ใน buildJobEmbedText แต่ไม่อยู่ใน
+// buildJobRequirementText แก้หมวดงานจึงต้อง re-embed แต่ cache คะแนนยังใช้ได้
+// อย่ายุบเป็นฟังก์ชันเดียว มีเทสต์ดักไว้
+export function embedTextChanged(before: JobInput, after: JobInput): boolean {
+  return buildJobEmbedText(before) !== buildJobEmbedText(after)
+}
+
+export function requirementTextChanged(before: JobInput, after: JobInput): boolean {
+  return buildJobRequirementText(before) !== buildJobRequirementText(after)
+}
