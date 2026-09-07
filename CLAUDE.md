@@ -130,6 +130,20 @@ fixture ของเทสต์อื่นจึงกลายเป็นแ
 และพิมพ์เหตุผลออกมา ส่วนความล้มเหลวอื่นยังตกตามปกติ เทสต์ที่แดงเพราะ Gemini
 ถูกจำกัดความจุคือสัญญาณลวง และสัญญาณลวงสอนให้คนเลิกสนใจสีแดง
 
+**ห้าม stub ฟังก์ชันที่กำลังจะทดสอบ** — `app/api/ingest/route.test.ts` เคย mock
+`hasRole: () => true` ทั้งไฟล์ ผลคือประตูสิทธิ์ของ endpoint ที่แทรกและเขียนทับแถวใน
+`candidates` เป็นชุด**ไม่เคยถูกทดสอบเลย** ลบ `if (!hasRole(...))` ออกจาก route
+แล้วเทสต์ทั้งชุดยังเขียว ตอนนี้ mock เฉพาะ `getSession` (ผ่าน `vi.hoisted` เพื่อให้
+แต่ละเทสต์ตั้ง role เองได้) ส่วน `hasRole` ใช้ตัวจริงผ่าน `importOriginal` —
+`hasRole` เป็นฟังก์ชันบริสุทธิ์ และ `getSession` import `next/headers` แบบ dynamic
+อยู่แล้ว โมดูลนี้จึง import ของจริงได้ในเทสต์ที่รันบน Node เปล่าๆ
+
+**ประตูสิทธิ์ต้องทดสอบว่า "ปฏิเสธก่อนทำงาน" ไม่ใช่แค่ status code** — เทสต์ยืนยันว่า
+`member` ไม่ทำให้ `upsertCandidate` ถูกเรียก และไม่ทำให้ `parseResume` (ซึ่งเสียเงิน
+ค่า token) ถูกเรียก ประตูที่อยู่หลังการทำงานคืนสถานะถูกแต่รั่วจริง และรวมกรณี role
+ที่ enum ไม่รู้จักด้วย เพราะ `getSession` cast ค่าจาก `profiles.role` ด้วย `as Role`
+โดยไม่ตรวจ — `ROLE_RANK[unknown] ?? 0` ต้องปิดประตู ไม่ใช่เปิด
+
 **เพดานเวลาการเรียก Gemini** อยู่ที่ `lib/gemini/withTimeout.ts` ปรับด้วย
 `GEMINI_TIMEOUT_MS` — เคยวัดได้ว่า free tier ตอบคำขอ 20 token ช้าถึง 52 วินาที
 และคืน 503 หลังรอ 155 วินาที การไม่มีเพดานแปลว่าผู้ใช้รอค้างโดยไม่มีอะไรบอก
@@ -386,8 +400,7 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-24-scraper-automation*`
   not specced. Note that deleting the `/signup` page does not close signups: the
   anon key is public, so `POST /auth/v1/signup` still works. The real switch is
   Supabase → Authentication → Providers → Email → "Allow new users to sign up".
-- `/api/ingest`'s 403 role gate has no test — `route.test.ts` stubs
-  `hasRole: () => true`.
+- ~~`/api/ingest`'s 403 role gate has no test~~ — **ทำแล้ว** ดูหัวข้อถัดไป
 
 ## หน้าสาธารณะ
 
