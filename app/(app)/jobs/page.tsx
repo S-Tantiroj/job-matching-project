@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getServerClient } from '@/lib/supabase/server'
-import CreateJobForm from '@/components/CreateJobForm'
+import JobForm from '@/components/JobForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,7 @@ export default async function JobsPage() {
   return (
     <main>
       <h1>งาน</h1>
-      <CreateJobForm />
+      <JobForm />
 
       <div className="section-header"><h2>งานทั้งหมด</h2></div>
       {(jobs ?? []).length === 0 ? (
