@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/auth/session'
+import { getSession, hasRole } from '@/lib/auth/session'
 import { upsertJob } from '@/lib/jobs/upsert'
 import type { JobInput } from '@/lib/jobs/normalize'
 
@@ -7,6 +7,11 @@ import type { JobInput } from '@/lib/jobs/normalize'
 export async function POST(req: NextRequest) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  // **เปลี่ยนพฤติกรรมของของเดิม** — เดิมมีแค่ getSession() ใครที่ล็อกอินก็สร้างงานได้
+  // ตอนนี้กั้นเท่ากับ PATCH/DELETE ที่ /api/jobs/[id]
+  if (!hasRole(session.role, 'data_manager')) {
+    return NextResponse.json({ error: 'คุณไม่มีสิทธิ์เพิ่มงาน' }, { status: 403 })
+  }
 
   const body = (await req.json()) as Partial<JobInput>
   if (!body.title || !body.description) {
