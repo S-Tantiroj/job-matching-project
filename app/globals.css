@@ -39,7 +39,9 @@ a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 p { margin: 8px 0; }
 
-.container { max-width: 960px; margin: 0 auto; padding: 24px; }
+/* 1280 ไม่ใช่ 960 — หน้าในกลุ่ม (app) ส่วนใหญ่เป็นการ์ดและตาราง ไม่ใช่ข้อความยาว
+   หน้าอ่านของกลุ่ม (public) ใช้ .pub-wrap ซึ่งยังอยู่ที่ 960px โดยตั้งใจ */
+.container { max-width: 1280px; margin: 0 auto; padding: 24px; }
 
 /* แถบบนเดิมของกลุ่ม (app) ถูกแทนด้วย .shell/.sidebar/.topbar แล้ว
    คลาส .nav .nav-brand .nav-link .nav-link.active .nav-right จึงถูกลบทิ้ง
@@ -214,8 +216,14 @@ p { margin: 8px 0; }
 .shell--collapsed .sidebar-toggle { margin-left: 0; }
 
 /* min-width: 0 จำเป็น — grid item มี min-width: auto โดยปริยาย
-   ตารางกว้างๆ ใน /candidates จะดัน column ให้ล้นออกนอกจอ */
-.content { min-width: 0; display: flex; flex-direction: column; }
+   ตารางกว้างๆ ใน /candidates จะดัน column ให้ล้นออกนอกจอ
+
+   **ห้ามทำเป็น flex column** — `.container` ใช้ `margin: 0 auto` และ auto margin
+   บนแกนขวางของ flexbox จะยกเลิกการ stretch แล้วหดกล่องลงเท่าความกว้างเนื้อหา
+   ผลคือหน้าเว็บทั้งหน้าเหลือความกว้างประมาณ 375px กลางจอ เหมือนเปิดบนมือถือ
+   (เกิดขึ้นจริง 2026-09-07 รอบแรกของงานนี้) block ธรรมดาให้ผลที่ถูกต้องอยู่แล้ว
+   เพราะ topbar กับ container ซ้อนกันเองตามลำดับ */
+.content { min-width: 0; }
 .topbar { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 10px;
   background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 20px; }
 .topbar-title { font-size: 14px; font-weight: 500; }
