@@ -7,7 +7,8 @@ import { requirementHash } from './cache'
 // reuse the same analyses cache keyed by (candidate_id, requirement_hash).
 export async function scoreCandidateAgainst(
   candidateId: string,
-  requirement: string
+  requirement: string,
+  jobId?: string
 ): Promise<{ score: number; reasoning: string; cached: boolean }> {
   const db = getServerClient()
   const hash = requirementHash(requirement)
@@ -40,12 +41,20 @@ export async function scoreCandidateAgainst(
   }
 
   const result = await analyzeCandidate(profile as any, requirement)
-  await db.from('analyses').insert({
+  // job_id ทำให้ลบงานแล้ว cascade กวาดแถวนี้ให้เอง และทำให้นับได้ว่างานนี้มีคะแนน
+  // cache ไว้กี่คน ผู้เรียกจากหน้าผู้สมัครไม่มีงานผูกอยู่จึงส่ง undefined มา
+  //
+  // **ไม่โยน error ตอนเขียน cache ล้ม** — คะแนนคำนวณเสร็จแล้วและถูกต้อง การเขียน
+  // cache เป็นผลพลอยได้ ถ้าโยนออกไปผู้ใช้จะเห็นว่าล้มเหลวทั้งที่ได้คำตอบแล้ว
+  // (เหตุผลเดียวกับ logActivity ใน lib/activity/log.ts)
+  const { error: insertError } = await db.from('analyses').insert({
     candidate_id: candidateId,
     requirement_text: requirement,
     requirement_hash: hash,
     score: result.score,
     reasoning: result.reasoning,
+    job_id: jobId ?? null,
   })
+  if (insertError) console.error('analyses cache write failed:', insertError)
   return { ...result, cached: false }
 }

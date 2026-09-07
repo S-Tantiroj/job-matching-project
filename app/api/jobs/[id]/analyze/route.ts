@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const requirement = buildJobRequirementText(job as any)
   try {
-    const result = await scoreCandidateAgainst(candidateId, requirement)
+    const result = await scoreCandidateAgainst(candidateId, requirement, id)
     return NextResponse.json(result)
   } catch (e: any) {
     if (e?.message === 'candidate not found') {
