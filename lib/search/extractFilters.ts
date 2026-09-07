@@ -1,5 +1,6 @@
 import { getGemini } from '@/lib/gemini/client'
 import { withTimeout } from '@/lib/gemini/withTimeout'
+import { MODEL_FAST } from '@/lib/gemini/models'
 
 export type ChipFilters = {
   skills?: string[]
@@ -11,7 +12,11 @@ export type SearchIntent = { semanticQuery: string; filters: ChipFilters }
 
 // Turns a natural-language recruiter query into a semantic query string (for
 // vector search over role/skills meaning) plus structured hard-filter chips.
-// One gemini-flash-latest call. English output for the structured values.
+// เรียกโมเดลครั้งเดียว ค่าที่ได้เป็นภาษาอังกฤษ
+//
+// ใช้ MODEL_FAST เพราะฟังก์ชันนี้วิ่งทุกครั้งที่มีคนกดค้นหา และเป็นงานสกัดโครงสร้าง
+// ที่ไม่ต้องใช้การให้เหตุผล วัดแล้วผลตรงกับรุ่นใหญ่ทุกฟิลด์ แต่เร็วกว่า 2.9 เท่า
+// และถูกกว่า 10 เท่า (ดู lib/gemini/models.ts)
 export async function extractSearchIntent(nl: string): Promise<SearchIntent> {
   const prompt = `You extract structured search filters from a recruiter's natural-language request. Respond with JSON ONLY, no prose.
 
@@ -45,7 +50,7 @@ Request: ${nl}`
   try {
     const res = await withTimeout(
       getGemini().models.generateContent({
-        model: 'gemini-flash-latest',
+        model: MODEL_FAST,
         contents: prompt,
         // Force strict JSON output (no markdown fences / prose) so complex queries
         // parse reliably instead of falling back to a plain semantic search.

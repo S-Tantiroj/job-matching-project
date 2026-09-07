@@ -1,5 +1,6 @@
 import { getGemini } from './client'
 import { withTimeout, GEMINI_TIMEOUT_MS } from './withTimeout'
+import { MODEL_EMBED } from './models'
 
 // 768 dims to match candidates.embedding (and the existing jobs table),
 // keeping candidate and job vectors in the same space for future matching.
@@ -11,7 +12,7 @@ export async function embedText(
 ): Promise<number[]> {
   const res = await withTimeout(
     getGemini().models.embedContent({
-      model: 'gemini-embedding-001',
+      model: MODEL_EMBED,
       contents: text,
       config: { outputDimensionality: 768, taskType },
     }),

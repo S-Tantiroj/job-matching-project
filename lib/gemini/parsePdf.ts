@@ -7,6 +7,7 @@ import {
   type ProfileDraft,
 } from '@/lib/self/profileDraft'
 import { EDUCATION_LEVELS, INDUSTRY_GROUPS } from '@/lib/self/taxonomy'
+import { MODEL_TEXT } from './models'
 
 // อ่าน resume/CV PDF ด้วย Gemini โดยตรง (ไม่ต้องมีไลบรารีอ่าน PDF) รองรับไฟล์ที่
 // สแกนมาเป็นรูปด้วย เพราะโมเดลมองเห็นหน้ากระดาษจริง
@@ -118,7 +119,7 @@ function coerceForReview(p: any): any {
 export async function parsePdfProfile(pdfBase64: string): Promise<ProfileDraft> {
   const res = await withTimeout(
     getGemini().models.generateContent({
-      model: 'gemini-flash-latest',
+      model: MODEL_TEXT,
       contents: [
         {
           role: 'user',

@@ -1,6 +1,7 @@
 import { getGemini } from './client'
 import { withTimeout, isTransient, GEMINI_TIMEOUT_MS } from './withTimeout'
 import type { CandidateInput } from '@/lib/ingest/normalize'
+import { MODEL_TEXT } from './models'
 
 const ATTEMPTS = 2
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -18,7 +19,7 @@ export async function analyzeCandidate(profile: CandidateInput, requirement: str
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
       const res = await withTimeout(
-        getGemini().models.generateContent({ model: 'gemini-flash-latest', contents: prompt }),
+        getGemini().models.generateContent({ model: MODEL_TEXT, contents: prompt }),
         GEMINI_TIMEOUT_MS
       )
       const parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())

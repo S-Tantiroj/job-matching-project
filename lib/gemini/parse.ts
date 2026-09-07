@@ -1,5 +1,6 @@
 import { getGemini } from './client'
 import type { CandidateInput } from '@/lib/ingest/normalize'
+import { MODEL_TEXT } from './models'
 
 // Parses raw resume/profile text into a structured CandidateInput (source=upload).
 export async function parseResume(text: string): Promise<CandidateInput> {
@@ -10,7 +11,7 @@ Output ALL field values in ENGLISH — if the source is in Thai, translate or ro
 ${text}`
 
   const res = await getGemini().models.generateContent({
-    model: 'gemini-flash-latest',
+    model: MODEL_TEXT,
     contents: prompt,
   })
   const parsed = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())

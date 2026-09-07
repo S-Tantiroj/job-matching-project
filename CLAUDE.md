@@ -30,9 +30,16 @@ Full spec and plan live in `docs/superpowers/`:
   768 dims is mandatory — it matches the `jobs` table so candidate and job
   vectors share one space for future matching. The `candidates.embedding`
   column is `vector(768)`.
-- **Generation:** model `gemini-flash-latest` for parse / analyze / generate
-  (the `gemini-2.5-flash` in import_jobs.py is deprecated for new API keys; the
-  `-latest` alias tracks the current flash model and avoids repeat breakage).
+- **Generation:** ชื่อรุ่นทั้งหมดอยู่ที่ `lib/gemini/models.ts` **ที่เดียว** และปักหมุด
+  ไว้ชัดเจน มีเทสต์ดักไม่ให้ไฟล์อื่นใน `lib/` หรือ `app/` เขียนชื่อรุ่นตรงๆ
+  `MODEL_TEXT` = `gemini-3.8-flash` (อ่าน PDF, วิเคราะห์, สร้างข้อมูล)
+  `MODEL_FAST` = `gemini-3.5-flash-lite` (สกัดเงื่อนไขค้นหา ซึ่งวิ่งทุกครั้งที่กดค้นหา)
+  **เลิกใช้ alias `gemini-flash-latest` แล้ว** — 2026-09-06 มันขยับไป 3.8-flash เอง
+  โดยไม่มีใคร deploy อะไร แล้ววัดได้ว่า output 87-90% เป็น thinking token ที่จ่ายแล้วทิ้ง
+  ทำให้การค้นหาช้าลง 3 เท่าและแพงขึ้น 10 เท่าเงียบๆ
+  **ยังไม่ได้วัด `parsePdf` และ `assess` กับรุ่นเบา** จึงยังอยู่บน MODEL_TEXT —
+  วัดด้วย `scripts/compare-gemini-models.ts` ก่อนเปลี่ยน และควรวัดก่อน 31 ธ.ค. 2026
+  ที่ราคาแนะนำตัวของ 3.8-flash หมดแล้วขึ้นเท่าตัว
 - **Data language:** candidate data stored in the tables is **English** (romanized
   Thai names, English institutions/skills/etc.) for uniformity with future scraped
   LinkedIn data. Generators enforce this: `generate.ts` and `parse.ts` output

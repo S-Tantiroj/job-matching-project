@@ -3,6 +3,7 @@ import { withTimeout, GEMINI_TIMEOUT_MS } from './withTimeout'
 import { computeYearsExperience } from '@/lib/ingest/normalize'
 import type { ProfileDraft } from '@/lib/self/profileDraft'
 import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape'
+import { MODEL_TEXT } from './models'
 
 // วิเคราะห์โปรไฟล์เป็นจุดแข็ง จุดอ่อน และสิ่งที่ควรพัฒนา ผลลัพธ์เป็นภาษาไทย
 // ตามกติกาว่า reasoning/advice ที่ผู้ใช้อ่านเป็นไทย ขณะที่ข้อมูลใน DB เป็นอังกฤษ
@@ -45,7 +46,7 @@ export async function assessProfile(profile: ProfileDraft): Promise<Assessment> 
 
   const res = await withTimeout(
     getGemini().models.generateContent({
-      model: 'gemini-flash-latest',
+      model: MODEL_TEXT,
       contents: buildAssessPrompt(profile, years),
       config: { responseMimeType: 'application/json' },
     }),

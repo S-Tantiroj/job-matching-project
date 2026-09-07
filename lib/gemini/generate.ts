@@ -1,5 +1,6 @@
 import { getGemini } from './client'
 import type { CandidateInput } from '@/lib/ingest/normalize'
+import { MODEL_TEXT } from './models'
 
 // Generates synthetic Thai candidate profiles (educated abroad, working in
 // Thailand) for demo/seed data. No real personal data. source = 'synthetic'.
@@ -11,7 +12,7 @@ Respond with a JSON array only, matching this schema:
 Each profile MUST include 2 to 4 experience entries forming a realistic career of 3 to 12 total years. start_date and end_date MUST be strings in strict ISO format "YYYY-MM-DD" (e.g. "2019-06-01"). Use null for end_date of a current role.`
 
   const res = await getGemini().models.generateContent({
-    model: 'gemini-flash-latest',
+    model: MODEL_TEXT,
     contents: prompt,
   })
   const arr = JSON.parse((res.text ?? '').replace(/```json|```/g, '').trim())
