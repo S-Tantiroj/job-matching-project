@@ -416,6 +416,41 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-08-24-scraper-automation*`
 กับบริษัทเท่านั้น **แก้ไฟล์นี้แล้วต้อง re-embed งานทั้งหมด** — `npx tsx scripts/seed-jobs.ts`
 ทำให้เอง (upsert บน `source,external_id` แล้วคำนวณ embedding ใหม่)
 
+### Phase 9 — แก้ไขและลบตำแหน่งงาน
+Spec/plan: `docs/superpowers/{specs,plans}/2026-09-07-job-edit-delete*`
+- [x] Migration 018 — `analyses.job_id` nullable + FK `on delete cascade` + index
+      **nullable โดยตั้งใจ** — การให้คะแนนจากหน้าผู้สมัครไม่มีงานผูกอยู่
+      **แถวเก่าก่อน migration เป็น NULL ตลอดไป** กวาดย้อนหลังไม่ได้
+- [x] **`analyses` ไม่เคยมีอะไรชี้กลับไปหางาน** มันคีย์ด้วย
+      `(candidate_id, requirement_hash)` โดย hash มาจากข้อความความต้องการ ผลคือ
+      **แก้งานหนึ่งครั้ง คะแนนที่ cache ไว้เข้าไม่ถึงอีกและไม่มีทางกวาด** เพราะ
+      cascade ยิงเฉพาะตอนลบแถวใน `jobs` ส่วนงานที่แค่ถูกแก้ยังอยู่ `job_id` จึงยัง
+      ถูกต้องแต่ hash ไม่ตรง — แถวนั้นอยู่ในสภาพ "ความสัมพันธ์ถูก แต่ไม่มีใครอ่านได้"
+      **`updateJob` จึงต้องลบ `analyses where job_id = id` เองเมื่อ
+      `requirementTextChanged`** ไม่งั้นทุกครั้งที่แก้งานจะทิ้งขยะเพิ่มถาวร
+- [x] **ลบหลังบันทึกสำเร็จเท่านั้น** — ลบก่อนแล้วบันทึกล้ม = เสีย cache ฟรีทั้งที่งาน
+      ยังเป็นข้อความเดิม และถ้าการลบล้มหลังบันทึกสำเร็จ **ห้ามโยน error**
+      งานถูกบันทึกแล้วจริง บอกผู้ใช้ว่า "ล้มเหลว" ตอนนั้นจะผิด (เหตุผลเดียวกับ `logActivity`)
+- [x] **`embedTextChanged` กับ `requirementTextChanged` ไม่ซ้ำซ้อนกัน อย่ายุบเป็นตัวเดียว**
+      `category` อยู่ใน `buildJobEmbedText` แต่ไม่อยู่ใน `buildJobRequirementText`
+      แก้หมวดงานจึงต้อง re-embed (เสียเงิน) แต่ cache คะแนนยังใช้ได้ มีเทสต์ดักไว้
+      และพิสูจน์แล้วว่าจับได้จริงด้วยการยุบสองฟังก์ชันชั่วคราว
+- [x] **`POST /api/jobs` เดิมมีแค่ `getSession()`** — `member` คนไหนก็สร้างงานได้
+      ตอนนี้กั้น `data_manager` เท่ากับ PATCH/DELETE **เป็นการเปลี่ยนพฤติกรรมของของเดิม**
+- [x] **PATCH ตัด `source`/`external_id` ทิ้งที่ route** ไม่ใช่แค่ไม่แสดงในฟอร์ม —
+      body มาจาก client ที่เชื่อไม่ได้ และการเปลี่ยน `external_id` อาจชนกับ
+      unique constraint `(source, external_id)` แล้วพังแบบอธิบายยาก
+- [x] **กับดัก seed เขียนทับไม่มีจริงสำหรับงานที่สร้างจากหน้าเว็บ** — งานจากฟอร์มได้
+      `source: 'manual'`, `external_id: null` ส่วน `seed-jobs.ts` upsert บน
+      `(source, external_id)` ด้วย `source: 'synthetic'` เท่านั้น **ต่างจากกรณี
+      `candidates` ที่ทุกแถวมาจากแหล่งภายนอก** เสี่ยงเฉพาะสี่งานจาก seed
+      ซึ่งจัดการด้วยแถบเตือน ไม่ใช่การห้าม
+- [x] แก้บั๊กพ่วง: `upsertJob` และ `matchCandidatesForJob` ไม่เช็ค `error`
+- **ยังไม่ได้แก้:** `scoreCandidateAgainst` อ่าน cache โดยไม่เช็ค `error` — ถ้าการอ่าน
+  พังจะตกไปเรียก Gemini ใหม่ทุกครั้งโดยเงียบ (แพงแต่ไม่ผิด) อยู่นอก spec รอบนั้น
+- **ยังไม่มี:** ประวัติการแก้ไขงาน (`activity_log` ยังไม่มี `entity_type = 'job'`),
+  การกู้คืนงานที่ลบไปแล้ว, การแก้เป็นชุด
+
 ### Not done / deliberately deferred
 - Google sign-in — deferred from v2. Risk: an existing email/password user
   signing in with Google may get a NEW auth user (and so a new profile, role
