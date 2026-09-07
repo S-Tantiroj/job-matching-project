@@ -38,7 +38,16 @@ export async function searchCandidates(
   const db = getServerClient()
   const emb = await queryEmbedding(semanticQuery)
 
-  const { data: matches } = await db.rpc('match_candidates_filtered', {
+  // **ต้องเช็ค error ของ RPC** ไม่ใช่ทิ้งไว้แล้วอ่านแต่ data
+  //
+  // เกิดขึ้นจริง 2026-09-07: migration ตั้ง search_path ของ RPC เป็น public เฉยๆ
+  // ทำให้ตัวดำเนินการ `<=>` ของ pgvector (อยู่ใน schema `extensions`) หาไม่เจอ
+  // RPC จึง error ทุกครั้ง แต่โค้ดตรงนี้อ่านแค่ data ซึ่งเป็น null แล้วคืน []
+  // **หน้าเว็บจึงขึ้นว่า "ไม่พบผลลัพธ์" ทั้งที่การค้นหาพังสนิท** ไม่มี log ไม่มีสัญญาณ
+  // อะไรเลย ใช้เวลาไล่หาสาเหตุนานกว่าที่ควรมาก
+  //
+  // "ไม่เจอใครตรงเงื่อนไข" กับ "ค้นหาไม่ได้" เป็นคนละเรื่องและต้องแยกให้ออก
+  const { data: matches, error: rpcError } = await db.rpc('match_candidates_filtered', {
     query_embedding: emb,
     match_count: 20,
     p_skills: filters.skills?.length ? filters.skills : null,
@@ -46,15 +55,25 @@ export async function searchCandidates(
     p_field_or_degree: filters.fieldOrDegree?.length ? filters.fieldOrDegree : null,
   })
 
+  if (rpcError) {
+    console.error('match_candidates_filtered failed:', rpcError)
+    throw new Error('search rpc failed')
+  }
+
   // PostgREST serializes float as a numeric string over the API — coerce to number.
   const sims = new Map<string, number>((matches ?? []).map((m: any) => [m.id, Number(m.similarity)]))
   const ids = [...sims.keys()]
   if (!ids.length) return []
 
-  const { data: rows } = await db
+  const { data: rows, error: rowsError } = await db
     .from('candidates')
     .select('id, full_name, headline')
     .in('id', ids)
+
+  if (rowsError) {
+    console.error('candidates fetch after ranking failed:', rowsError)
+    throw new Error('search fetch failed')
+  }
 
   const byId = new Map((rows ?? []).map((r: any) => [r.id, r]))
   return (ids.map((id) => byId.get(id)).filter(Boolean) as any[])

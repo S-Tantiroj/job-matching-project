@@ -11,15 +11,20 @@
 -- ฟังก์ชันจะไปอ่านตารางนั้นแทน — ทั้งสี่ตัวเป็น SECURITY INVOKER จึงไม่ถึงขั้น
 -- ยกระดับสิทธิ์ แต่ตรึงไว้ก็ไม่เสียอะไรและตัดคำถามนี้ทิ้งไปเลย
 --
+-- **ต้องมี `extensions` ด้วย** — pgvector ติดตั้งอยู่ใน schema `extensions` ไม่ใช่ `public`
+-- ตัวดำเนินการ `<=>` จึงอยู่ที่นั่น รอบแรกของ migration นี้ตั้งเป็น `public, pg_temp`
+-- เฉยๆ แล้วทั้งสี่ตัวพังทันที ("operator does not exist: extensions.vector <=> ...")
+-- โดยหน้าค้นหาขึ้นแค่ "ไม่พบผลลัพธ์" ไม่มี error ให้เห็น (แก้ที่ lib/search/query.ts แล้ว)
+--
 -- ใส่ pg_temp ไว้ท้ายสุดเสมอตามที่ Postgres แนะนำ กัน temp table บังหน้า
 alter function public.match_candidates(vector, integer)
-  set search_path = public, pg_temp;
+  set search_path = public, extensions, pg_temp;
 alter function public.match_candidates_filtered(vector, integer, text[], boolean, text[], integer, text[])
-  set search_path = public, pg_temp;
+  set search_path = public, extensions, pg_temp;
 alter function public.match_jobs(vector, integer)
-  set search_path = public, pg_temp;
+  set search_path = public, extensions, pg_temp;
 alter function public.duplicate_candidate_names()
-  set search_path = public, pg_temp;
+  set search_path = public, extensions, pg_temp;
 
 -- ---------------------------------------------------------------------------
 -- 2. ถอน EXECUTE ของ RPC ทั้งสี่จาก role ฝั่งเบราว์เซอร์

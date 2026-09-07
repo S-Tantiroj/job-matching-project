@@ -60,6 +60,15 @@ Full spec and plan live in `docs/superpowers/`:
   สามคอลัมน์ที่เหลือไว้เพราะ `app/(app)/shortlists/page.tsx` เป็น client component
   ที่ select ซ้อนผ่าน anon key ถ้าตัดหมด PostgREST จะคืน null ให้ resource ที่ซ้อน
   **โดยไม่ error** หน้า Shortlist จะไม่มีชื่อผู้สมัครแบบหาสาเหตุยาก
+- **`search_path` ของ RPC ต้องมี `extensions` ด้วยเสมอ** — pgvector ติดตั้งใน schema
+  `extensions` ไม่ใช่ `public` ตัวดำเนินการ `<=>` จึงอยู่ที่นั่น ตั้งเป็น
+  `public, pg_temp` เฉยๆ แล้ว RPC ทั้งสี่พังทันทีด้วย
+  `operator does not exist: extensions.vector <=> extensions.vector`
+  (เกิดขึ้นจริง 2026-09-07 ตอนทำ migration 017 รอบแรก)
+- **`.rpc()` และ `.from()` ต้องเช็ค `error` เสมอ ห้าม destructure เอาแต่ `data`** —
+  ตอน RPC พังข้างบน `lib/search/query.ts` อ่านแค่ `data` ซึ่งเป็น null แล้วคืน `[]`
+  **หน้าค้นหาจึงขึ้น "ไม่พบผลลัพธ์" ทั้งที่ระบบค้นหาพังสนิท** ไม่มี log ไม่มีสัญญาณเลย
+  "ไม่มีใครตรงเงื่อนไข" กับ "ค้นหาไม่ได้" เป็นคนละเรื่อง ต้องแยกให้ผู้ใช้เห็น
 - **RPC ทั้งสี่ (`match_candidates`, `match_candidates_filtered`, `match_jobs`,
   `duplicate_candidate_names`) เรียกได้เฉพาะ `service_role`** (migration 017)
   ถอน EXECUTE จาก PUBLIC/anon/authenticated แล้ว **ต้องถอนจาก PUBLIC ด้วยเสมอ**
