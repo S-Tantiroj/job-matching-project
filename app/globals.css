@@ -41,13 +41,9 @@ p { margin: 8px 0; }
 
 .container { max-width: 960px; margin: 0 auto; padding: 24px; }
 
-.nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 20px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; }
-.nav-brand { font-size: 16px; font-weight: 500; color: var(--accent); }
-.nav-brand:hover { text-decoration: none; }
-.nav-link { color: var(--text-faint); font-size: 14px; }
-.nav-link:hover { color: var(--text); text-decoration: none; }
-.nav-link.active { color: var(--text); font-weight: 500; }
-.nav-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+/* แถบบนเดิมของกลุ่ม (app) ถูกแทนด้วย .shell/.sidebar/.topbar แล้ว
+   คลาส .nav .nav-brand .nav-link .nav-link.active .nav-right จึงถูกลบทิ้ง
+   .nav-avatar เก็บไว้เพราะ AppShell ใช้เป็นวงกลม "S" ตอนหุบ */
 .nav-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-soft-text); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 16px 18px; }

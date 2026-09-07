@@ -1,29 +1,16 @@
-import Link from 'next/link'
+import AppShell from '@/components/nav/AppShell'
 import { getSession, hasRole } from '@/lib/auth/session'
 
+// ยังเป็น server component — getSession() ต้องอ่าน cookie ฝั่งเซิร์ฟเวอร์
+// ส่งเข้า AppShell แค่ boolean สองตัวซึ่ง serialize ข้าม boundary ได้
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
-  const isAdmin = !!session && hasRole(session.role, 'admin')
-  const isDataManager = !!session && hasRole(session.role, 'data_manager')
-
   return (
-    <div>
-      <nav className="nav">
-        <Link href="/dashboard" className="nav-brand">Skouth</Link>
-        <Link href="/dashboard" className="nav-link">Dashboard</Link>
-        <Link href="/search" className="nav-link">Search</Link>
-        <Link href="/jobs" className="nav-link">Job</Link>
-        <Link href="/shortlists" className="nav-link">Shortlist</Link>
-        <Link href="/self-assessment" className="nav-link">ประเมินตัวเอง</Link>
-        <Link href="/help" className="nav-link">คู่มือ</Link>
-        {isDataManager && <Link href="/candidates" className="nav-link">ข้อมูล</Link>}
-        {isDataManager && <Link href="/import" className="nav-link">Import</Link>}
-        {isAdmin && <Link href="/admin/users" className="nav-link">Admin</Link>}
-        <div className="nav-right">
-          <Link href="/settings" className="nav-link">Setting</Link>
-        </div>
-      </nav>
-      <div className="container">{children}</div>
-    </div>
+    <AppShell
+      isAdmin={!!session && hasRole(session.role, 'admin')}
+      isDataManager={!!session && hasRole(session.role, 'data_manager')}
+    >
+      {children}
+    </AppShell>
   )
 }
