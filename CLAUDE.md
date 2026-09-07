@@ -227,6 +227,31 @@ Spec/plan: `docs/superpowers/{specs,plans}/2026-07-30-ui-redesign*`
 - [x] `app/globals.css` — design tokens + ~40 reusable classes. Every page uses
       these; avoid new ad-hoc inline styles.
 - [x] Every page/component restyled onto it; sticky nav; dashboard shortlist cards
+- [x] **แถบเมนูของกลุ่ม `(app)` เป็น sidebar ซ้ายที่พับได้** (`components/nav/`)
+      Spec: `docs/superpowers/specs/2026-09-07-sidebar-nav-design.md`
+      รายการเมนูทั้งหมดอยู่ที่ `navItems.ts` **ที่เดียว** ทั้ง sidebar ปุ่มมุมขวาบน และ
+      ชื่อหน้าบนแถบบนอ่านจากที่นั่น `app/(app)/layout.tsx` ยังเป็น server component
+      ที่เรียก `getSession()` แล้วส่ง boolean สองตัวเข้า `AppShell` ซึ่งเป็น client component
+      **`pageTitle` ต้องเลือกคำนำหน้าที่ยาวที่สุด** ไม่ใช่อันแรกที่เจอ ไม่งั้นคำตอบจะขึ้นกับ
+      ลำดับในอาร์เรย์โดยไม่มีใครรู้ว่ามีความหมาย และต้องเทียบที่ขอบเส้นทาง
+      (`/searching` ไม่ใช่หน้าลูกของ `/search`)
+      **`navItems.test.ts` เทียบกับ `matcher` ของ `middleware.ts` สองทิศ** — ทุก href
+      ที่ต้องล็อกอินต้องอยู่ใน matcher (ลืมใส่ = หน้านั้นเปิดได้โดยไม่ล็อกอินแบบเงียบๆ)
+      และ `/help` ต้องไม่อยู่ใน matcher (ใส่เข้าไป = คนที่ยังไม่ล็อกอินอ่านคู่มือไม่ได้)
+      พิสูจน์แล้วว่าจับได้จริงด้วยการทำให้พังชั่วคราว
+      **บนจอแคบ drawer ต้องปิดเองเมื่อเปลี่ยนหน้า** — layout ของ Next.js อยู่ข้าม
+      การเปลี่ยนหน้า state ของ client component จึงไม่ถูกล้าง ไม่มี `useEffect` ที่ผูกกับ
+      `pathname` แล้ว drawer จะค้างทับเนื้อหาทุกครั้งที่กดเมนู
+      **ข้อความในเมนูซ่อนด้วย CSS ไม่ใช่เงื่อนไขใน JSX** — บนจอแคบ sidebar กางเต็ม
+      เสมอแม้ผู้ใช้เคยกดหุบบนจอกว้าง ตัดใน JSX แล้วป้ายจะหายทั้งที่มีที่ให้แสดง
+      ไม่ทำไฮไลต์เมนูหน้าปัจจุบัน (ตัดสินใจแล้ว) ไม่จำสถานะพับ/กาง ไม่มี focus trap
+- [x] **`.content` ห้ามเป็น flex column** — `.container` ใช้ `margin: 0 auto` และ
+      **auto margin บนแกนขวางของ flexbox ยกเลิกการ stretch แล้วหดกล่องเหลือเท่าเนื้อหา**
+      เกิดขึ้นจริง 2026-09-07: หน้าเว็บทั้งหน้าเหลือกว้างราว 375px กลางจอ เหมือนเปิดบน
+      มือถือ ทั้งที่ `.container` ตั้ง `max-width` ไว้ชัดเจน block ธรรมดาให้ผลที่ถูกต้อง
+      อยู่แล้วเพราะ topbar กับ container ซ้อนกันเองตามลำดับ
+      `.container` ขยายเป็น **1280px** (หน้ากลุ่ม `(app)` เป็นการ์ดและตารางเป็นหลัก)
+      ส่วน `.pub-wrap` ของหน้าอ่านยังอยู่ที่ 960px โดยตั้งใจ — บรรทัดยาวเกินอ่านยาก
 
 ### Phase 6 — v2 Data management
 Spec/plan: `docs/superpowers/{specs,plans}/2026-08-06-v2-data-management*`
