@@ -24,23 +24,37 @@ export async function upsertJob(input: JobInput): Promise<{ id: string; updated:
     embedding,
   }
 
+  // ต้องเช็ค error ทุกครั้ง — เดิมอ่าน (data as any).id ทันทีโดยไม่เช็ค insert พัง
+  // เมื่อไรจะได้ TypeError: Cannot read properties of null แทนข้อความที่บอกสาเหตุ
   if (input.external_id) {
-    const { data: existing } = await db
+    const { data: existing, error: findError } = await db
       .from('jobs')
       .select('id')
       .eq('source', source)
       .eq('external_id', input.external_id)
       .maybeSingle()
+    if (findError) {
+      console.error('upsertJob lookup failed:', findError)
+      throw new Error('job lookup failed')
+    }
 
-    const { data } = await db
+    const { data, error } = await db
       .from('jobs')
       .upsert(row, { onConflict: 'source,external_id' })
       .select('id')
       .single()
+    if (error) {
+      console.error('upsertJob upsert failed:', error)
+      throw new Error('job upsert failed')
+    }
 
     return { id: (data as any).id, updated: !!existing }
   }
 
-  const { data } = await db.from('jobs').insert(row).select('id').single()
+  const { data, error } = await db.from('jobs').insert(row).select('id').single()
+  if (error) {
+    console.error('upsertJob insert failed:', error)
+    throw new Error('job insert failed')
+  }
   return { id: (data as any).id, updated: false }
 }
