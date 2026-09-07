@@ -60,6 +60,20 @@ Full spec and plan live in `docs/superpowers/`:
   สามคอลัมน์ที่เหลือไว้เพราะ `app/(app)/shortlists/page.tsx` เป็น client component
   ที่ select ซ้อนผ่าน anon key ถ้าตัดหมด PostgREST จะคืน null ให้ resource ที่ซ้อน
   **โดยไม่ error** หน้า Shortlist จะไม่มีชื่อผู้สมัครแบบหาสาเหตุยาก
+- **RPC ทั้งสี่ (`match_candidates`, `match_candidates_filtered`, `match_jobs`,
+  `duplicate_candidate_names`) เรียกได้เฉพาะ `service_role`** (migration 017)
+  ถอน EXECUTE จาก PUBLIC/anon/authenticated แล้ว **ต้องถอนจาก PUBLIC ด้วยเสมอ**
+  ไม่ใช่แค่สอง role ที่ระบุชื่อ ไม่งั้นทุกคนยังเรียกได้ผ่าน PUBLIC อยู่ดี
+  ทั้งสี่ถูกเรียกจากฝั่งเซิร์ฟเวอร์เท่านั้น ถ้าวันไหนต้องเรียกจาก client component
+  อย่า grant กลับ — ให้ทำเป็น route handler แล้วเรียกด้วย service-role แทน
+- **`is_admin()` ห้ามถอน EXECUTE จาก authenticated** แม้ Supabase advisor จะเตือน —
+  RLS policy ของ `profiles` เรียกมันอยู่ (`using ((id = auth.uid()) OR is_admin())`)
+  และ Postgres ประเมิน policy ด้วยสิทธิ์ของผู้ query ถอนแล้วการอ่าน `profiles`
+  ทุกครั้งจะ error ทำให้ `/settings` และ `AnalyzePanel` พัง ตัวมันเองไม่รั่วอะไร:
+  anon ได้ false เสมอ ส่วน authenticated รู้สถานะตัวเองซึ่งอ่านจากแถวตัวเองได้อยู่แล้ว
+- **คำเตือน `rls_enabled_no_policy` 9 ตารางเป็นการออกแบบ ไม่ใช่บั๊ก** — เปิด RLS
+  โดยไม่มี policy = ปฏิเสธทุกอย่างผ่าน anon key ส่วนแอปใช้ service-role ซึ่ง bypass
+  **อย่า "แก้" ด้วยการเพิ่ม policy** นั่นคือการเปิดช่องที่ตอนนี้ปิดสนิทอยู่
 - **Secrets** live in `.env` only (git-ignored). Never commit keys.
 
 ## Environment (.env)
