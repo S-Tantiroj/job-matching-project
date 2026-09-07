@@ -50,6 +50,16 @@ Full spec and plan live in `docs/superpowers/`:
   Adding a new source should only touch `lib/ingest`.
 - **DB migrations are additive** — never drop or alter the existing `jobs` table.
 - **RLS** protects user data; the service-role client is server-only.
+- **`candidates` เปิดให้ `authenticated` อ่านได้แค่ `id, full_name, headline`**
+  (migration 016) RLS กรอง "แถว" ส่วน column-level grant กรอง "คอลัมน์" ต้องมีทั้งคู่
+  เดิม policy เป็น `auth.role() = 'authenticated'` ทั้ง SELECT และ INSERT ซึ่งแปลว่า
+  **ใครที่ล็อกอินก็ยิง `GET /rest/v1/candidates?select=*` ด้วย anon key ที่เป็นค่า
+  สาธารณะ แล้วดูดทั้งตารางรวมอีเมลได้** การกั้น role ที่ชั้นแอปกันได้แค่หน้าจอ
+  **ห้ามรัน `grant all on all tables in schema public to authenticated`** — คำสั่งนี้
+  โผล่ในคู่มือทั่วไปบ่อย และมันจะเปิดช่องนี้กลับมาทันที
+  สามคอลัมน์ที่เหลือไว้เพราะ `app/(app)/shortlists/page.tsx` เป็น client component
+  ที่ select ซ้อนผ่าน anon key ถ้าตัดหมด PostgREST จะคืน null ให้ resource ที่ซ้อน
+  **โดยไม่ error** หน้า Shortlist จะไม่มีชื่อผู้สมัครแบบหาสาเหตุยาก
 - **Secrets** live in `.env` only (git-ignored). Never commit keys.
 
 ## Environment (.env)
