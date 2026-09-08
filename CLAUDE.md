@@ -108,6 +108,21 @@ Full spec and plan live in `docs/superpowers/`:
   สามคอลัมน์ที่เหลือไว้เพราะ `app/(app)/shortlists/page.tsx` เป็น client component
   ที่ select ซ้อนผ่าน anon key ถ้าตัดหมด PostgREST จะคืน null ให้ resource ที่ซ้อน
   **โดยไม่ error** หน้า Shortlist จะไม่มีชื่อผู้สมัครแบบหาสาเหตุยาก
+- **`profiles` คืนสิทธิ์ UPDATE ให้เฉพาะ `display_name` กับ `settings`** (migration 019)
+  **policy ที่เขียนว่า "แก้ได้เฉพาะแถวของตัวเอง" ไม่ได้แปลว่า "แก้คอลัมน์ไหนก็ได้ในแถวนั้น
+  เป็นเรื่องปลอดภัย"** — migration 003 สร้าง
+  `for update using (id = auth.uid()) with check (id = auth.uid())` พร้อมคอมเมนต์ว่า
+  "Role changes are still restricted" ซึ่งถูกครึ่งเดียว มันกันการแก้แถวคนอื่นได้จริง
+  แต่ไม่ได้กันการแก้คอลัมน์ `role` **ในแถวของตัวเอง** ยืนยันกับฐานจริง 2026-09-08 ว่า
+  `anon` และ `authenticated` มีสิทธิ์ครบทุกชนิดบนตารางนี้ตามค่าตั้งต้นของ Supabase
+  ผลคือใครที่ล็อกอินก็ยิง `PATCH /rest/v1/profiles?id=eq.<ตัวเอง>` ด้วย `{"role":"admin"}`
+  ผ่าน anon key ที่เป็นค่าสาธารณะแล้วได้สิทธิ์แอดมินทันที
+  **คอลัมน์ใหม่ที่เพิ่มทีหลังจะไม่ได้สิทธิ์เขียนโดยอัตโนมัติ ซึ่งเป็นสิ่งที่ต้องการ** —
+  ถ้าคอลัมน์ใหม่ต้องให้ผู้ใช้แก้เองจริงๆ ต้องเพิ่มชื่อเข้า `grant update (...)` อย่างตั้งใจ
+  การเปลี่ยน role ยังทำได้ผ่าน `POST /api/admin/users` ซึ่งใช้ service-role
+  เทสต์อยู่ที่ `019_lock_profile_columns.int.test.ts` — **สร้างบัญชีจริงแล้วล็อกอินด้วย
+  anon key ยิง PostgREST ตรงๆ** ไม่ใช่ตรวจว่าหน้าจอมีช่องให้แก้หรือไม่ เพราะช่องโหว่
+  ไม่ได้อยู่ที่หน้าจอ และตรวจค่าในฐานซ้ำ ไม่เชื่อค่า `error` อย่างเดียว
 - **`search_path` ของ RPC ต้องมี `extensions` ด้วยเสมอ** — pgvector ติดตั้งใน schema
   `extensions` ไม่ใช่ `public` ตัวดำเนินการ `<=>` จึงอยู่ที่นั่น ตั้งเป็น
   `public, pg_temp` เฉยๆ แล้ว RPC ทั้งสี่พังทันทีด้วย
