@@ -1,10 +1,13 @@
 import { getServerClient } from '@/lib/supabase/server'
+import { identityName, identitySecondary } from '@/lib/auth/identity'
 import { NOISY_ACTIONS, type Action, type EntityType } from './log'
 
 export type ActivityRow = {
   id: string
   actor_id: string | null
   actor_name: string | null
+  /** อีเมลจริงของผู้กระทำ แสดงกำกับเมื่อชื่อที่ตั้งเองไม่ใช่อีเมล — ดู lib/auth/identity.ts */
+  actor_email: string | null
   action: Action
   entity_type: EntityType
   entity_id: string | null
@@ -15,28 +18,43 @@ export type ActivityRow = {
 
 // ชื่อผู้กระทำถูก resolve ตอนอ่าน ไม่ใช่ตอนเขียน — ผู้ใช้เปลี่ยนชื่อได้ และเราอยาก
 // เห็นชื่อปัจจุบัน ต่างจาก summary ที่ต้องแช่แข็งไว้เพราะสิ่งที่อ้างถึงอาจถูกลบ
+//
+// **ดึงอีเมลมาด้วยเสมอ** เพราะ display_name เป็นค่าที่ผู้ใช้ตั้งเองได้ตั้งแต่ migration 021
+// ผู้ใช้ตั้งชื่อตัวเองเป็นอีเมลของเพื่อนร่วมงานได้ แล้วบรรทัด "ใครทำอะไร" จะชี้ผิดคน
+// ซึ่งทำลายเหตุผลเดียวที่ตาราง activity_log มีอยู่
 async function withActorNames(rows: any[]): Promise<ActivityRow[]> {
   const ids = [...new Set(rows.map((r) => r.actor_id).filter(Boolean))] as string[]
-  const names = new Map<string, string>()
+  const people = new Map<string, { display_name: string | null; email: string | null }>()
 
   if (ids.length) {
-    const { data } = await getServerClient().from('profiles').select('id, display_name').in('id', ids)
+    const { data, error } = await getServerClient()
+      .from('profiles')
+      .select('id, display_name, email')
+      .in('id', ids)
+    // อ่านชื่อไม่ได้ไม่ใช่เหตุให้ทั้งรายการหาย — บรรทัดกิจกรรมยังมีประโยชน์
+    // แม้ไม่รู้ชื่อผู้ทำ แต่ต้อง log ไม่งั้นจะเห็นแค่ "ระบบอัตโนมัติ" เต็มไปหมด
+    // โดยไม่รู้ว่าเป็นเพราะ query พัง
+    if (error) console.error('withActorNames failed to read profiles:', error.message)
     for (const p of (data ?? []) as any[]) {
-      if (p.display_name) names.set(p.id, p.display_name)
+      people.set(p.id, { display_name: p.display_name ?? null, email: p.email ?? null })
     }
   }
 
-  return rows.map((r) => ({
+  return rows.map((r) => {
+    const p = r.actor_id ? people.get(r.actor_id) : undefined
+    return {
     id: r.id,
     actor_id: r.actor_id,
-    actor_name: r.actor_id ? names.get(r.actor_id) ?? null : null,
+    actor_name: p ? identityName(p) || null : null,
+    actor_email: p ? identitySecondary(p) : null,
     action: r.action,
     entity_type: r.entity_type,
     entity_id: r.entity_id,
     summary: r.summary,
     count: r.count,
     created_at: r.created_at,
-  }))
+    }
+  })
 }
 
 /** บันทึกทั้งระบบ สำหรับหน้าจัดการข้อมูล (กั้น data_manager ที่ตัวหน้าแล้ว) */

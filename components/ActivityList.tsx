@@ -48,7 +48,12 @@ export default function ActivityList({
               <div className="muted" style={{ fontSize: 12 }}>
                 {r.summary}
                 {showActor && (
-                  <span className="faint"> — {r.actor_name ?? (r.actor_id ? 'ผู้ใช้ที่ถูกลบแล้ว' : 'ระบบอัตโนมัติ')}</span>
+                  <span className="faint">
+                    {' '}— {r.actor_name ?? (r.actor_id ? 'ผู้ใช้ที่ถูกลบแล้ว' : 'ระบบอัตโนมัติ')}
+                    {/* ชื่อที่แสดงเป็นค่าที่ผู้ใช้ตั้งเองได้ จึงปลอมเป็นคนอื่นได้
+                        อีเมลมาจาก auth และแก้ไม่ได้ — บรรทัด "ใครทำอะไร" ต้องมีมันกำกับ */}
+                    {r.actor_email && ` (${r.actor_email})`}
+                  </span>
                 )}
               </div>
             </div>

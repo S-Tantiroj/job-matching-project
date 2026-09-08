@@ -53,8 +53,11 @@ See `docs/superpowers/` for the full spec and implementation plan, and
    Sign up at `/signup`, then make yourself admin once:
 
    ```sql
-   update profiles set role = 'admin' where display_name = '<your-email>';
+   update profiles set role = 'admin' where email = '<your-email>';
    ```
+
+   Match on `email`, not `display_name` — users can change their display name
+   themselves, so matching on it silently updates 0 rows (which is not an error).
 
 ## Tests
 
