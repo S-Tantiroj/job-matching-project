@@ -95,6 +95,15 @@ p { margin: 8px 0; }
 .section-header { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 10px; }
 
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+
+/* กราฟแท่งบน Dashboard — ใช้ auto-fit กับ 320px ไม่ใช่ .card-grid ที่เป็น 220px
+   เพราะแท่งต้องมีที่พอให้ป้ายชื่อทักษะยาวๆ กับตัวเลขอยู่คนละฝั่งโดยไม่ตัดคำ
+   auto-fit (ไม่ใช่ auto-fill) ทำให้เหลือสองการ์ดแล้วยืดเต็มความกว้าง ไม่ทิ้งช่องว่าง */
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.bar-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { height: 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 4px; }
 .shortlist-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 15px 16px; display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 80px; }
 .shortlist-card:hover { border-color: var(--border-hover); }
 .shortlist-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-soft-text); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }

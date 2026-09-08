@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { getServerClient } from '@/lib/supabase/server'
 import { getSession } from '@/lib/auth/session'
 import ActivityList from '@/components/ActivityList'
+import BarList from '@/components/dashboard/BarList'
 import { listMyActivity, listRecentlyViewed } from '@/lib/activity/read'
+import { getTopSkills, getSourceCounts } from '@/lib/dashboard/stats'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +51,9 @@ export default async function Dashboard() {
   const myActivity = session ? await listMyActivity(session.userId, 12) : []
   const viewed = session ? await listRecentlyViewed(session.userId, 6) : []
 
+  // สองกราฟนี้ไม่ขึ้นต่อกันและไม่ขึ้นกับผู้ใช้ ยิงขนานได้
+  const [skills, sources] = await Promise.all([getTopSkills(10), getSourceCounts()])
+
   return (
     <main>
       <h1>Dashboard</h1>
@@ -75,6 +80,37 @@ export default async function Dashboard() {
         <div className="metric">
           <div className="metric-label">งานที่เปิด</div>
           <div className="metric-value">{jobCount ?? 0}</div>
+        </div>
+      </div>
+
+      <div className="section-header">
+        <h2>ภาพรวมข้อมูล</h2>
+      </div>
+      <div className="chart-grid">
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>ทักษะที่พบบ่อย</h3>
+          <p className="faint" style={{ fontSize: 12, marginTop: 0 }}>
+            10 อันดับแรก นับจากจำนวนผู้สมัครที่มีทักษะนั้น
+          </p>
+          {/* "อ่านไม่ได้" กับ "ยังไม่มีข้อมูล" ต้องแยกกัน — อย่างหลังเป็นคำตอบที่
+              ผู้ใช้เชื่อได้ทันทีโดยไม่สงสัยอะไร ถ้าเอามาใช้ตอนระบบพังจะไม่มีใครรู้ */}
+          {skills.failed ? (
+            <p style={{ color: 'var(--bad)', fontSize: 13 }}>โหลดสถิติทักษะไม่สำเร็จ</p>
+          ) : (
+            <BarList items={skills.items} unit="คน" empty="ยังไม่มีข้อมูลทักษะในระบบ" />
+          )}
+        </div>
+
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>ผู้สมัครตามแหล่งที่มา</h3>
+          <p className="faint" style={{ fontSize: 12, marginTop: 0 }}>
+            ข้อมูลในระบบมาจากช่องทางใดบ้าง
+          </p>
+          {sources.failed ? (
+            <p style={{ color: 'var(--bad)', fontSize: 13 }}>โหลดสถิติแหล่งที่มาไม่สำเร็จ</p>
+          ) : (
+            <BarList items={sources.items} unit="คน" empty="ยังไม่มีผู้สมัครในระบบ" />
+          )}
         </div>
       </div>
 
