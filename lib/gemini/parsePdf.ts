@@ -7,7 +7,7 @@ import {
   type ProfileDraft,
 } from '@/lib/self/profileDraft'
 import { EDUCATION_LEVELS, INDUSTRY_GROUPS } from '@/lib/self/taxonomy'
-import { MODEL_TEXT } from './models'
+import { MODEL_TEXT, THINKING_LOW } from './models'
 
 // อ่าน resume/CV PDF ด้วย Gemini โดยตรง (ไม่ต้องมีไลบรารีอ่าน PDF) รองรับไฟล์ที่
 // สแกนมาเป็นรูปด้วย เพราะโมเดลมองเห็นหน้ากระดาษจริง
@@ -19,7 +19,9 @@ import { MODEL_TEXT } from './models'
 const EDU_VALUES = EDUCATION_LEVELS.map((c) => `"${c.value}"`).join(', ')
 const IND_VALUES = INDUSTRY_GROUPS.map((c) => `"${c.value}"`).join(', ')
 
-const PROMPT = `Read this resume/CV PDF and return JSON only, matching this schema:
+// export เพื่อให้ scripts/compare-gemini-models.ts วัด prompt ตัวจริง
+// ถ้าคัดลอกไปไว้ในสคริปต์ ตัวเลขที่วัดได้จะไม่ใช่ของงานจริงทันทีที่แก้ prompt ที่นี่
+export const PARSE_PDF_PROMPT = `Read this resume/CV PDF and return JSON only, matching this schema:
 {"profile":{"full_name":"","headline":"","industry":"","location":"","summary":"","skills":[],"education":[{"institution":"","country":"","degree":"","field_of_study":"","start_year":0,"end_year":0,"gpa":""}],"experience":[{"company":"","title":"","start_date":"","end_date":"","description":""}]}}
 
 Rules:
@@ -126,11 +128,17 @@ export async function parsePdfProfile(pdfBase64: string): Promise<ProfileDraft> 
           parts: [
             // เอกสาร Gemini แนะนำให้วาง part ของไฟล์ก่อนข้อความ prompt
             { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
-            { text: PROMPT },
+            { text: PARSE_PDF_PROMPT },
           ],
         },
       ],
-      config: { responseMimeType: 'application/json' },
+      // **ยังอยู่บน MODEL_TEXT โดยตั้งใจ ไม่ย้ายไป MODEL_FAST**
+      // วัดเมื่อ 2026-09-08 กับ CV จริง: flash-lite ผ่านตัวตรวจ 3/3 และถูกกว่า
+      // แต่ให้ผลไม่ซ้ำกันเลยสักครั้งใน 3 รอบ และ**ทำ education หายไปหนึ่งรายการ**
+      // (4 แทนที่จะเป็น 5) ตัวตรวจดูแค่ว่ารูปทรงถูก ไม่ได้ดูว่าครบ
+      // ข้อมูลที่หายตั้งแต่ต้นคือสิ่งที่คนตรวจร่างมักไม่ทันสังเกต ต่างจากค่าที่ผิด
+      // ซึ่งเห็นแล้วรู้ทันที — จึงยอมจ่ายแพงกว่าเพื่อความครบ
+      config: { responseMimeType: 'application/json', thinkingConfig: THINKING_LOW },
     }),
     GEMINI_TIMEOUT_MS
   )

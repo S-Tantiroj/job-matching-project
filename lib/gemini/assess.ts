@@ -3,7 +3,7 @@ import { withTimeout, GEMINI_TIMEOUT_MS } from './withTimeout'
 import { computeYearsExperience } from '@/lib/ingest/normalize'
 import type { ProfileDraft } from '@/lib/self/profileDraft'
 import { normalizeAssessment, type Assessment } from '@/lib/self/assessmentShape'
-import { MODEL_TEXT } from './models'
+import { MODEL_FAST } from './models'
 
 // วิเคราะห์โปรไฟล์เป็นจุดแข็ง จุดอ่อน และสิ่งที่ควรพัฒนา ผลลัพธ์เป็นภาษาไทย
 // ตามกติกาว่า reasoning/advice ที่ผู้ใช้อ่านเป็นไทย ขณะที่ข้อมูลใน DB เป็นอังกฤษ
@@ -46,7 +46,11 @@ export async function assessProfile(profile: ProfileDraft): Promise<Assessment> 
 
   const res = await withTimeout(
     getGemini().models.generateContent({
-      model: MODEL_TEXT,
+      // วัดเมื่อ 2026-09-08: flash-lite ผ่าน 3/3 และเป็นรุ่นเดียวที่ให้จำนวนข้อ
+      // เท่ากันทุกรอบ เร็วกว่า 3.2 เท่า ถูกกว่า 5 เท่า ($1.03 เทียบ $5.21)
+      // **ตัวชี้วัดของงานนี้อ่อนกว่างานอื่น** — สคริปต์เทียบแค่จำนวนข้อ ไม่ได้เทียบ
+      // เนื้อหา และผลรอบก่อนหน้ากลับกัน จึงควรอ่านคำแนะนำจริงเทียบกันด้วยตาเป็นระยะ
+      model: MODEL_FAST,
       contents: buildAssessPrompt(profile, years),
       config: { responseMimeType: 'application/json' },
     }),
