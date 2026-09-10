@@ -5,6 +5,10 @@ import { parseLinkedInCsv } from '../lib/ingest/linkedin'
 import { upsertCandidate } from '../lib/ingest/upsert'
 import { embedHash } from '../lib/ingest/embedHash'
 import { classifyRow } from '../lib/ingest/classify'
+import {
+  readPhantombusterConfig,
+  describePhantombusterConfig,
+} from '../lib/ingest/phantombusterConfig'
 
 // ดึงผลลัพธ์ล่าสุดจาก PhantomBuster แล้วนำเข้าฐานข้อมูล
 // รันด้วย: npx tsx scripts/sync-phantombuster.ts [--dry-run]
@@ -39,8 +43,27 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 async function main() {
-  const agentId = process.env.PHANTOMBUSTER_AGENT_ID
-  if (!agentId) throw new Error('PHANTOMBUSTER_AGENT_ID is not set')
+  // ตรวจการตั้งค่าก่อนแตะฐานข้อมูล และ**แยก "ยังไม่ได้ตั้งค่า" ออกจาก "พัง"**
+  //
+  // เดิมบรรทัดนี้เป็น `if (!agentId) throw` ซึ่งทำให้สภาวะที่คาดไว้อยู่แล้ว
+  // (ยังไม่ได้สมัคร PhantomBuster จึงยังไม่มี secret) กลายเป็น exit 1
+  // แล้ว GitHub Actions ขึ้นแดงทุกคืน — แดงติดกันสามคืนจริงเมื่อ 2026-09-08 ถึง 10
+  // โดยไม่มีอะไรผิดในโค้ดเลย ดูเหตุผลเต็มใน lib/ingest/phantombusterConfig.ts
+  const config = readPhantombusterConfig(process.env)
+  if (config.kind !== 'ok') {
+    const notConfigured = config.kind === 'not-configured'
+    // ยังไม่ได้ตั้งค่าไม่ใช่ข้อผิดพลาด จึงไปทาง stdout ส่วนตั้งไม่ครบไป stderr
+    ;(notConfigured ? console.log : console.error)(describePhantombusterConfig(config))
+    // ยังไม่ได้ตั้งค่า = จบด้วยความสำเร็จ (ไม่มีอะไรให้ทำ)
+    // ตั้งไม่ครบ = มีคนตั้งใจตั้งแล้วพลาด ต้องดัง
+    process.exit(notConfigured ? 0 : 1)
+    // `return` ตัวนี้ไม่ใช่โค้ดตายแม้ process.exit จะประกาศคืน never —
+    // มันทำให้ TypeScript แคบชนิดของ config เหลือ 'ok' ได้แน่นอนโดยไม่ต้องพึ่ง
+    // การวิเคราะห์ never ที่เปลี่ยนพฤติกรรมตามเวอร์ชันและการตั้งค่า
+    return
+  }
+  const { agentId } = config
+
   const db = getServerClient()
 
   // ปิด run ที่ค้างสถานะ running จากรอบก่อนที่ล้มแบบไม่คาดคิด
