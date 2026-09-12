@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, hasRole } from '@/lib/auth/session'
 import { updateJob, deleteJob } from '@/lib/jobs/update'
+import { validateJobInput } from '@/lib/jobs/validate'
 import type { JobInput } from '@/lib/jobs/normalize'
 
 // ประตูสิทธิ์ต้องอยู่ก่อนการทำงานทุกอย่าง — ประตูที่อยู่หลัง updateJob
@@ -29,12 +30,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // และการเปลี่ยน external_id อาจชนกับ unique constraint (source, external_id)
   const { source: _source, external_id: _externalId, ...patch } = body
 
-  if ('title' in patch && !String(patch.title ?? '').trim()) {
-    return NextResponse.json({ error: 'ตำแหน่งงานห้ามว่าง' }, { status: 400 })
-  }
-  if ('description' in patch && !String(patch.description ?? '').trim()) {
-    return NextResponse.json({ error: 'รายละเอียดงานห้ามว่าง' }, { status: 400 })
-  }
+  // `partial: true` — PATCH ที่แก้แค่บางช่องไม่ควรถูกบังคับให้ส่ง title/description
+  // มาด้วย แต่ถ้าส่งมาก็ต้องผ่านเกณฑ์เดียวกับตอนสร้างใหม่
+  //
+  // **การตรวจความยาวต้องอยู่ที่นี่ ไม่ใช่ปล่อยให้ catch ข้างล่างรับ** — catch นั้น
+  // ตอบว่า "ระบบมีปัญหาชั่วคราว กรุณาลองใหม่" ซึ่งผิดสำหรับข้อมูลที่ยาวเกิน
+  // ลองอีกกี่ครั้งก็ล้มเหมือนเดิม ผู้ใช้จะสรุปว่าเว็บพังทั้งที่แค่ต้องตัดข้อความ
+  const invalid = validateJobInput(patch, { partial: true })
+  if (invalid) return NextResponse.json({ error: invalid.message }, { status: 400 })
 
   try {
     const result = await updateJob(id, patch as Partial<JobInput>)

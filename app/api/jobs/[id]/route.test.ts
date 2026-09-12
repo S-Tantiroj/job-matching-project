@@ -44,6 +44,32 @@ beforeEach(() => {
   deleteMock.mockImplementation(async () => ({ deleted: true }))
 })
 
+// ---------------------------------------------------------------------------
+// ด่านความยาว varchar(255)
+// ---------------------------------------------------------------------------
+// **ต้องตอบ 400 ไม่ใช่ปล่อยให้ catch ข้างล่างตอบ 500** — catch นั้นบอกว่า
+// "ระบบมีปัญหาชั่วคราว กรุณาลองใหม่" ซึ่งผิดสำหรับข้อมูลที่ยาวเกิน
+// ลองอีกกี่ครั้งก็ล้มเหมือนเดิม ผู้ใช้จะสรุปว่าเว็บพังทั้งที่แค่ต้องตัดข้อความ
+
+test('PATCH ชื่อตำแหน่งยาวเกิน 255 ได้ 400 และ updateJob ต้องไม่ถูกเรียก', async () => {
+  const res = await patch({ title: 'ก'.repeat(256) })
+  expect(res.status).toBe(400)
+  expect(updateMock).not.toHaveBeenCalled()
+})
+
+test('PATCH สถานที่ยาวเกินก็ต้องถูกกัน ไม่ใช่แค่ title', async () => {
+  const res = await patch({ location: 'ก'.repeat(256) })
+  expect(res.status).toBe(400)
+  expect(updateMock).not.toHaveBeenCalled()
+})
+
+// PATCH ที่แก้แค่บางช่องต้องไม่ถูกบังคับให้ส่ง title/description มาด้วย
+test('PATCH ที่ส่งมาแค่ location ยังผ่านตามเดิม', async () => {
+  const res = await patch({ location: 'Bangkok' })
+  expect(res.status).toBe(200)
+  expect(updateMock).toHaveBeenCalled()
+})
+
 test('data_manager แก้งานได้', async () => {
   const res = await patch({ title: 'New title' })
   expect(res.status).toBe(200)

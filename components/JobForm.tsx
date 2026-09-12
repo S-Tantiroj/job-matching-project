@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { requirementTextChanged, type JobInput } from '@/lib/jobs/normalize'
+import { JOB_TEXT_LIMITS, JOB_YEARS_RANGE } from '@/lib/jobs/validate'
 
 export type EditableJob = JobInput & { id: string; source: string }
 
@@ -101,11 +102,14 @@ export default function JobForm({
           แล้วค่าที่แก้จะกลับคืนเป็นค่าเดิม
         </p>
       )}
-      <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ตำแหน่งงาน (เช่น Data Scientist)" />
-      <input className="input" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="บริษัท (ไม่บังคับ)" />
+      {/* `maxLength` เป็นด่านแรกเท่านั้น กันได้แค่การพิมพ์และการวาง แต่กันคำขอ
+          ที่ยิงตรงมาที่ API ไม่ได้ ด่านจริงอยู่ที่ lib/jobs/validate.ts ซึ่ง route
+          เรียกก่อนแตะฐานข้อมูล — ตัวเลขทั้งหมดมาจากไฟล์นั้นที่เดียว ไม่ได้พิมพ์ซ้ำ */}
+      <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={JOB_TEXT_LIMITS.title} placeholder="ตำแหน่งงาน (เช่น Data Scientist)" />
+      <input className="input" value={company} onChange={(e) => setCompany(e.target.value)} maxLength={JOB_TEXT_LIMITS.company} placeholder="บริษัท (ไม่บังคับ)" />
       <input className="input" value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="สกิลที่ต้องการ คั่นด้วยจุลภาค เช่น Python, SQL" />
-      <input className="input" value={minExp} onChange={(e) => setMinExp(e.target.value)} placeholder="ประสบการณ์ขั้นต่ำ (ปี)" type="number" />
-      <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="สถานที่ (ไม่บังคับ)" />
+      <input className="input" value={minExp} onChange={(e) => setMinExp(e.target.value)} type="number" min={JOB_YEARS_RANGE.min} max={JOB_YEARS_RANGE.max} step={1} placeholder="ประสบการณ์ขั้นต่ำ (ปี)" />
+      <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={JOB_TEXT_LIMITS.location} placeholder="สถานที่ (ไม่บังคับ)" />
       <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="รายละเอียดงาน" rows={4} />
       {willVoidCache && (
         <p className="faint" style={{ fontSize: 13, margin: 0 }}>
