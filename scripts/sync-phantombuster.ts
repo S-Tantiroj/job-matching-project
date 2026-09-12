@@ -62,7 +62,7 @@ async function main() {
     // การวิเคราะห์ never ที่เปลี่ยนพฤติกรรมตามเวอร์ชันและการตั้งค่า
     return
   }
-  const { agentId } = config
+  const { agentId, apiKey } = config
 
   const db = getServerClient()
 
@@ -94,7 +94,7 @@ async function main() {
   let truncated = false
 
   try {
-    const csv = await fetchLatestCsv(agentId)
+    const csv = await fetchLatestCsv(agentId, apiKey)
     let rows = parseLinkedInCsv(csv)
     console.log(`fetched ${rows.length} rows`)
 
