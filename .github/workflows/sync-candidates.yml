@@ -36,10 +36,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      # **เลขเวอร์ชันของ action กับ node-version เป็นคนละเรื่อง อย่าสับสน**
+      #   @v5          = runtime ที่ GitHub ใช้รันตัว action เอง (ต้องเป็น Node 24)
+      #   node-version = Node ที่ใช้รันสคริปต์ของเรา
+      # คำเตือน "Node.js 20 is deprecated" พูดถึงอย่างแรกเท่านั้น การเปลี่ยนแค่
+      # node-version จึงไม่ทำให้คำเตือนหาย — เคยเข้าใจผิดข้อนี้มาแล้ว
+      #
+      # GitHub **ถอด Node 20 ออกจาก runner วันที่ 23 ก.ย. 2026** หลังจากนั้น
+      # action ที่ยังเป็น v4 จะพังจริง ไม่ใช่แค่ขึ้นคำเตือน
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          # Node 24 เป็น Active LTS ถึง 30 เม.ย. 2028
+          # ไม่เลือก 22 เพราะอยู่ช่วง Maintenance แล้วและหมดอายุ เม.ย. 2027
+          # ส่วน Node 20 หมดอายุไปตั้งแต่ 30 เม.ย. 2026 คือไม่มี security patch แล้ว
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npx tsx scripts/sync-phantombuster.ts
