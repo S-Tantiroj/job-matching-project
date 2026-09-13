@@ -69,6 +69,42 @@ test('parses real search-export headers (short names)', () => {
   expect(c.education![1]).toMatchObject({ institution: 'Chulalongkorn', degree: 'Bachelor of Engineering' })
 })
 
+// ---------------------------------------------------------------------------
+// การเลือกชื่อระหว่างคู่ที่แยกไว้กับ fullName
+// ---------------------------------------------------------------------------
+// เดิมเป็น `pair || fullName` ซึ่งดูเหมือนถูกแต่ไม่ใช่ — filter(Boolean) ทิ้ง
+// lastName ที่ว่าง เหลือชื่อต้นซึ่งเป็นค่าจริง `||` จึงไม่ไปถึง fullName
+// **ค่าที่สมบูรณ์กว่าถูกเมินเพราะค่าที่ไม่สมบูรณ์เป็น truthy**
+// เจอ 2026-09-13 ด้วย scripts/check-linkedin-csv.ts กับไฟล์ตัวอย่าง
+const nameRow = (first: string, last: string, full: string) =>
+  `firstName,lastName,fullName,headline\n${first},${last},${full},Engineer`
+
+test('มีทั้งชื่อต้นและนามสกุล ใช้คู่ที่แยกไว้', () => {
+  expect(parseLinkedInCsv(nameRow('Somchai', 'Jaidee', 'ไม่ควรถูกใช้'))[0].full_name).toBe(
+    'Somchai Jaidee'
+  )
+})
+
+test('นามสกุลว่าง แต่ fullName ครบ ต้องใช้ fullName', () => {
+  expect(parseLinkedInCsv(nameRow('Nattapong', '', 'Nattapong Wong'))[0].full_name).toBe(
+    'Nattapong Wong'
+  )
+})
+
+test('ชื่อต้นว่าง แต่ fullName ครบ ต้องใช้ fullName', () => {
+  expect(parseLinkedInCsv(nameRow('', 'Wong', 'Nattapong Wong'))[0].full_name).toBe(
+    'Nattapong Wong'
+  )
+})
+
+test('มีแต่ชื่อต้น ไม่มี fullName ก็ยังใช้เท่าที่มี ไม่ทิ้งแถว', () => {
+  expect(parseLinkedInCsv(nameRow('Nattapong', '', ''))[0].full_name).toBe('Nattapong')
+})
+
+test('ไม่มีชื่อเลยทั้งสามช่อง ต้องทิ้งแถว', () => {
+  expect(parseLinkedInCsv(nameRow('', '', ''))).toHaveLength(0)
+})
+
 test('search export maps additionalInfo to summary and timestamp to refreshed_at', () => {
   const [c] = parseLinkedInCsv(searchExport)
   expect(c.summary).toBe('Leads the ranking team.')

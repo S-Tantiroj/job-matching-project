@@ -28,6 +28,48 @@ function makeGetter(row: Record<string, string>) {
 
 const yearOf = (iso: string | null) => (iso ? Number(iso.slice(0, 4)) : undefined)
 
+// Every column name this parser looks at, in both phantoms' naming schemes.
+//
+// Used by `scripts/check-linkedin-csv.ts` to report columns a CSV carries that
+// we ignore — the failure this catches is a phantom renaming a field, which is
+// otherwise silent: the value just never reaches the database and nothing errors.
+//
+// **Keep in sync by hand when adding a `get(...)` call below.** A test cannot
+// verify this list matches usage without re-implementing the parser, so the
+// list is a diagnostic aid, not a guarantee.
+export const KNOWN_COLUMNS = [
+  'firstName', 'lastName', 'fullName',
+  'linkedinHeadline', 'headline',
+  'linkedinCompanyIndustry', 'companyIndustry', 'industry',
+  'location',
+  'linkedinDescription', 'additionalInfo',
+  'linkedinProfileUrl', 'profileUrl',
+  'professionalEmail',
+  'refreshedAt', 'timestamp',
+  'linkedinJobTitle', 'jobTitle',
+  'companyName', 'company',
+  'linkedinJobDateRange', 'jobDateRange',
+  'linkedinJobDescription', 'jobDescription',
+  'linkedinPreviousJobTitle', 'jobTitle2',
+  'previousCompanyName', 'company2',
+  'linkedinPreviousJobDateRange', 'jobDateRange2',
+  'linkedinPreviousJobDescription', 'jobDescription2',
+  'linkedinSchoolName', 'school',
+  'linkedinSchoolDegree', 'schoolDegree',
+  'linkedinSchoolFieldOfStudy', 'schoolFieldOfStudy',
+  'linkedinSchoolDateRange', 'schoolDateRange',
+  'linkedinPreviousSchoolName', 'school2',
+  'linkedinPreviousSchoolDegree', 'schoolDegree2',
+  'linkedinPreviousSchoolFieldOfStudy', 'schoolFieldOfStudy2',
+  'linkedinPreviousSchoolDateRange', 'schoolDateRange2',
+  'linkedinSkillsLabel', 'skillsLabel',
+] as const
+
+/** true when the parser reads this column under either naming scheme */
+export function isKnownColumn(header: string): boolean {
+  return KNOWN_COLUMNS.some((k) => norm(k) === norm(header))
+}
+
 // PhantomBuster HTML-escapes some columns and not others — in a real search
 // export, additionalInfo came back with "&amp;" while headline had a raw "&".
 // Decoding matters twice over: the text is shown to recruiters, and it feeds
@@ -56,10 +98,22 @@ export function parseLinkedInCsv(text: string): CandidateInput[] {
   return data
     .map((row): CandidateInput | null => {
       const get = makeGetter(row)
-      // fullName is a fallback: the search export carries it alongside the split
-      // pair, and a row can have it when firstName/lastName came back blank.
-      const full_name =
-        [get('firstName'), get('lastName')].filter(Boolean).join(' ').trim() || get('fullName')
+      // The split pair is trusted only when BOTH halves are there. Otherwise
+      // fullName wins if it exists.
+      //
+      // The old rule was `pair || fullName`, which looks equivalent but is not:
+      // filter(Boolean) drops an empty lastName, leaving a truthy first name, so
+      // `||` never reaches fullName. A row with firstName "Nattapong", blank
+      // lastName and fullName "Nattapong Wong" stored just "Nattapong" —
+      // **the more complete value was ignored because a partial one was truthy**.
+      // Caught 2026-09-13 by scripts/check-linkedin-csv.ts on the sample file.
+      //
+      // Why this matters beyond the display name: `linkedin_url` is the dedup key
+      // (migration 008), and rows without one fall back to matching on name.
+      const first = get('firstName')
+      const last = get('lastName')
+      const pair = [first, last].filter(Boolean).join(' ').trim()
+      const full_name = first && last ? pair : get('fullName') || pair
       if (!full_name) return null
 
       const experience: NonNullable<CandidateInput['experience']> = []
