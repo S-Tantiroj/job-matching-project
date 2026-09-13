@@ -178,9 +178,27 @@ Vitest does not auto-load `.env`; integration tests start with `import 'dotenv/c
 
 - `npm install` — install deps
 - `npm run dev` — Next.js dev server
+- **`npm run typecheck`** — `tsc --noEmit` · **ห้ามใช้ `npx tsc`** ดูกับดักข้างล่าง
 - `npx vitest run <path>` — run a test file
 - `npx tsx scripts/<file>.ts` — run a script (e.g. `scripts/test-gemini.ts`)
+- `npx tsx scripts/check-linkedin-csv.ts <path.csv>` — ตรวจ CSV จาก PhantomBuster
 - DB migrations: run `supabase/migrations/*.sql` in the Supabase SQL editor
+
+**กับดัก: แพ็กเกจชื่อ `tsc` บน npm ไม่ใช่ TypeScript** (เจอจริง 2026-09-13)
+มันเป็นแพ็กเกจหลอกที่มีหน้าที่อย่างเดียวคือพิมพ์ "This is not the tsc command you
+are looking for" และมันเคยถูกติดตั้งเข้า `dependencies` ของโปรเจกต์นี้จริง
+**ทั้งมันและ TypeScript สร้าง binary ชื่อ `tsc` เหมือนกัน** ตัวหลอกจึงทับ
+`node_modules/.bin/tsc` แล้ว `npx tsc` เรียกผิดตัวโดยไม่มีอะไรบอก
+
+สามอย่างที่ทำให้เรื่องนี้ยืดเยื้อ และต้องรู้ไว้
+- **`npx` ไปหยิบจาก registry ให้เงียบๆ เมื่อหาในเครื่องไม่เจอ** ถ้ามันถามว่า
+  "Need to install the following packages" **ให้ตอบ n แล้วหาสาเหตุก่อน** เพราะแปลว่า
+  เครื่องมือที่คิดว่ามีในโปรเจกต์ไม่มีจริง — การกด y คือสิ่งที่พาตัวหลอกกลับมารอบสอง
+- **`npm uninstall tsc` ลบ symlink ที่ชนกันไปด้วย** TypeScript ไม่ถูกเชื่อมกลับเอง
+  ต้อง `npm install` ซ้ำหนึ่งครั้ง
+- **`npm run <script>` หา binary ใน `node_modules/.bin` เท่านั้น ไม่แตะ registry**
+  ถ้าไม่เจอมันล้มทันทีแทนที่จะดาวน์โหลดอะไรมาแทน จึงปลอดภัยกว่า `npx` เสมอ
+  ทางที่ไม่พึ่ง symlink เลยคือ `node node_modules/typescript/bin/tsc --noEmit`
 
 ## Testing
 
@@ -743,10 +761,22 @@ From the Cowork Linux sandbox, this drive is mounted read-mostly:
   installed from Windows, so anything needing a native binary fails on Linux:
   **`npx vitest` and `npm run build`** (rollup wants `@rollup/rollup-linux-x64-gnu`)
   and **`npx tsx`** (esbuild wants `@esbuild/linux-x64`). Run those on Windows.
-- **`npx tsc --noEmit` DOES work** and is the strongest check available in a
-  session. Baseline: **0 errors outside `*.test.ts`**; the ~500 errors inside
-  test files are pre-existing (vitest globals are not in `tsconfig` `types`),
-  so filter with `| grep -v "\.test\.ts"`.
+- **`npm run typecheck` DOES work** and is the strongest check available in a
+  session. **Baseline: 0 errors across the whole project — ไม่ต้องกรองอะไรทั้งนั้น**
+  (เปลี่ยนเมื่อ 2026-09-13 · ก่อนหน้านี้มี ~500 error ในไฟล์ `*.test.ts` และคำแนะนำ
+  ในไฟล์นี้เคยบอกให้กรองด้วย `| grep -v "\.test\.ts"`)
+  **`vitest-globals.d.ts` ที่รากโปรเจกต์คือสิ่งที่ทำให้เป็น 0** — `vitest.config.ts`
+  ตั้ง `globals: true` ซึ่งฉีด `test`/`expect`/`describe`/`vi` เข้า global ตอนรัน
+  แต่ **`tsc` ไม่อ่านไฟล์นั้น** จึงไม่รู้จักชื่อพวกนั้นเลย ไฟล์ `.d.ts` บรรทัดเดียว
+  (`/// <reference types="vitest/globals" />`) แก้ทั้งหมด
+  **ใช้ `.d.ts` ไม่ใช่ `"types"` ใน tsconfig โดยตั้งใจ** — การใส่ `types` **จำกัด**
+  แพ็กเกจ `@types/*` ที่ดึงอัตโนมัติให้เหลือเฉพาะที่ระบุ ลืมใส่ `node` เมื่อไร
+  สคริปต์ที่ใช้ `process`/`Buffer` พังทันที triple-slash เป็นการ **เพิ่ม** เฉยๆ
+  **การกรองเสียงรบกวนไม่ใช่การแก้ — มันทำให้ error จริงมองไม่เห็น** ทันทีที่กอง 500
+  หายไป มี TS2556 โผล่มาหนึ่งตัวใน `lib/search/query.test.ts` ซึ่งเป็น**รูปแบบเดิม
+  ที่เคยแก้ไปแล้วสองที่** (mock ที่ประกาศ `async () =>` แล้ว spread `...a` เข้าไป)
+  ตัวที่สามรอดมาได้เพราะไม่มีใครเห็น **สัญญาณล้มเหลวที่เกิดทุกครั้งโดยไม่มีอะไรผิด
+  สอนให้คนเลิกอ่านมัน** — หลักการเดียวกับ `tolerateOutage` และ cron ที่แดงทุกคืน
 - **No DNS to Supabase or Gemini** (both `EAI_AGAIN`) — no integration test and
   no script that calls either service can run from a session.
 

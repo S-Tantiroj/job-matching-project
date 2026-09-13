@@ -4,8 +4,11 @@ let rpcArgs: any = null
 let rpcData: any[] = [ { id: 'c1', similarity: 0.92 }, { id: 'c2', similarity: 0.71 } ]
 let candRows: any[] = [ { id: 'c1', full_name: 'A', headline: 'X' }, { id: 'c2', full_name: 'B', headline: 'Y' } ]
 
-const embedMock = vi.fn(async () => new Array(768).fill(0.1))
-vi.mock('@/lib/gemini/embed', () => ({ embedText: (...a: any[]) => embedMock(...a) }))
+// รับ rest parameter ไว้แม้ mock จะไม่สนใจค่าที่ส่งมา — ถ้าประกาศเป็น `async () =>`
+// การ spread `...a` เข้าไปจะไม่ผ่าน tsc (TS2556) เพราะคอมไพเลอร์ไม่รู้ว่าอาร์เรย์ยาวเท่าไร
+// ยังส่งอาร์กิวเมนต์ต่อไว้เผื่อวันหน้าอยากตรวจด้วย `toHaveBeenCalledWith`
+const embedMock = vi.fn(async (..._a: unknown[]) => new Array(768).fill(0.1))
+vi.mock('@/lib/gemini/embed', () => ({ embedText: (...a: unknown[]) => embedMock(...a) }))
 vi.mock('@/lib/supabase/server', () => ({
   getServerClient: () => ({
     rpc: async (_name: string, args: any) => {
