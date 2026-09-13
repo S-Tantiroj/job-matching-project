@@ -26,7 +26,11 @@ export async function POST(req: NextRequest) {
   if (body.type === 'csv') {
     inputs = parseCsv(body.csv, body.mapping)
   } else if (body.type === 'linkedin') {
-    inputs = parseLinkedInCsv(body.csv)
+    // 'csv' ไม่ใช่ 'scraper' — คนเป็นคนอัปโหลดไฟล์นี้เอง จะกรอกจากเทมเพลตด้วยมือ
+    // หรือวางไฟล์ที่ export มาก็ตาม **ที่หน้านี้มีคนอยู่ในวงจรเสมอ** ต่างจาก
+    // scripts/sync-candidates.ts ที่รันเองตอนตีสองโดยไม่มีใครดู
+    // ป้ายนี้ไปโผล่ในกราฟ "ผู้สมัครตามแหล่งที่มา" ซึ่งเป็นหลักฐาน PDPA
+    inputs = parseLinkedInCsv(body.csv, 'csv')
   } else if (body.type === 'upload') {
     inputs = [await parseResume(body.text)]
   } else {

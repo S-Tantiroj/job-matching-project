@@ -6,11 +6,16 @@ vi.mock('@/lib/ingest/csv', () => ({
     { full_name: 'B', source: 'csv' },
   ],
 }))
+// mock นี้ **ต้องรับพารามิเตอร์ `source` และใช้มันจริง** ไม่ใช่คืนค่าคงที่ —
+// สิ่งที่ต้องพิสูจน์คือ route บอกที่มาถูกต้อง ถ้า mock ฝัง 'scraper' ไว้เอง
+// เทสต์จะเขียวไม่ว่า route จะส่งอะไรมา ซึ่งคือการทดสอบ mock ไม่ใช่ทดสอบโค้ด
+type Src = 'synthetic' | 'csv' | 'upload' | 'scraper'
+const parseLinkedInMock = vi.fn((_csv: string, source: Src = 'scraper') => [
+  { full_name: 'L1', source },
+  { full_name: 'L2', source },
+])
 vi.mock('@/lib/ingest/linkedin', () => ({
-  parseLinkedInCsv: () => [
-    { full_name: 'L1', source: 'scraper' },
-    { full_name: 'L2', source: 'scraper' },
-  ],
+  parseLinkedInCsv: (csv: string, source?: Src) => parseLinkedInMock(csv, source),
 }))
 // รับพารามิเตอร์ตรงตาม `upsertCandidate(input, userId)` เพื่อให้ยืนยันได้ว่า
 // userId ที่ส่งเข้าไปมาจากเซสชัน ไม่ใช่จาก body (เดิมเป็น `(...a: any[])` ซึ่ง
@@ -53,6 +58,7 @@ beforeEach(() => {
   h.session = { userId: 'u1', role: 'data_manager' }
   upsertMock.mockClear()
   parseResumeMock.mockClear()
+  parseLinkedInMock.mockClear()
 })
 
 test('csv ingest imports each parsed row', async () => {
@@ -66,6 +72,24 @@ test('linkedin ingest imports each parsed row', async () => {
   const res = await post({ type: 'linkedin', csv: 'a' })
   const json = await res.json()
   expect(json.imported).toBe(2)
+})
+
+test('linkedin ingest records source csv, not scraper', async () => {
+  // ไฟล์ที่อัปโหลดที่ /import มีคนกดปุ่มเสมอ ต่างจาก scripts/sync-candidates.ts
+  // ที่รันเองตอนตีสอง — ป้ายนี้ไปโผล่ในกราฟ "ผู้สมัครตามแหล่งที่มา" ที่เป็นหลักฐาน PDPA
+  await post({ type: 'linkedin', csv: 'a' })
+  expect(parseLinkedInMock).toHaveBeenCalledWith('a', 'csv')
+})
+
+test('the source reaches upsertCandidate, not just the parser', async () => {
+  // ตรวจปลายทาง ไม่ใช่แค่ว่าอาร์กิวเมนต์ถูกส่ง — ค่าที่ถูกส่งแล้วหายกลางทาง
+  // จะทำให้เทสต์ข้างบนเขียวทั้งที่แถวในฐานยังติดป้ายผิด
+  await post({ type: 'linkedin', csv: 'a' })
+  expect(upsertMock).toHaveBeenCalledWith(expect.objectContaining({ source: 'csv' }), 'u1')
+  expect(upsertMock).not.toHaveBeenCalledWith(
+    expect.objectContaining({ source: 'scraper' }),
+    expect.anything()
+  )
 })
 
 test('upload ingest parses resume then upserts once', async () => {

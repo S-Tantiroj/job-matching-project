@@ -86,10 +86,23 @@ const ENTITIES: [RegExp, string][] = [
 const decodeEntities = (s: string) =>
   ENTITIES.reduce((acc, [re, ch]) => acc.replace(re, ch), s)
 
-// Parse a PhantomBuster LinkedIn CSV export into CandidateInput rows.
+// Parse a LinkedIn-shaped CSV into CandidateInput rows.
 // Deterministic (no LLM). Accepts camelCase or friendly-label headers. Captures
 // current + previous job and school. Education country is intentionally omitted.
-export function parseLinkedInCsv(text: string): CandidateInput[] {
+//
+// `source` is a PARAMETER because the file cannot tell you where it came from.
+// The same column layout arrives two ways: a PhantomBuster export (`scraper`)
+// and a human filling in `lib/ingest/csvTemplate.ts` by hand (`csv`). Only the
+// caller knows which. Labelling a hand-typed row `scraper` is not a cosmetic
+// slip — `candidate_source_counts` feeds the Dashboard chart that exists to
+// answer "where did this data come from", which is PDPA evidence.
+//
+// The default stays `scraper` so `scripts/sync-candidates.ts` keeps its old
+// behaviour without a change; `/api/ingest` type `linkedin` passes `'csv'`.
+export function parseLinkedInCsv(
+  text: string,
+  source: CandidateInput['source'] = 'scraper'
+): CandidateInput[] {
   const { data } = Papa.parse<Record<string, string>>(text, {
     header: true,
     skipEmptyLines: true,
@@ -175,7 +188,7 @@ export function parseLinkedInCsv(text: string): CandidateInput[] {
         // additionalInfo is the search export's closest thing to the About
         // section. It feeds buildEmbedText, so losing it thins the vector.
         summary: get('linkedinDescription', 'additionalInfo') || undefined,
-        source: 'scraper',
+        source,
         linkedin_url: get('linkedinProfileUrl', 'profileUrl') || undefined,
         professional_email: get('professionalEmail') || undefined,
         // timestamp = when the phantom scraped the row, which is what

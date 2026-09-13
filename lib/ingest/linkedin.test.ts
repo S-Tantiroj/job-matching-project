@@ -30,6 +30,31 @@ test('friendly-label headers parse identically (header tolerance)', () => {
   expect(c.skills).toEqual(['Python', 'SQL'])
 })
 
+// ---------------------------------------------------------------------------
+// ที่มาของแถว (source)
+//
+// ไฟล์ CSV ไม่ได้บอกว่าใครสร้างมัน — phantom ดึงมา หรือคนพิมพ์เองจากเทมเพลต
+// **ผู้เรียกเท่านั้นที่รู้** จึงเป็นพารามิเตอร์ ไม่ใช่ค่าที่เดาจากเนื้อไฟล์
+// ---------------------------------------------------------------------------
+
+test('defaults to scraper when the caller does not say', () => {
+  // สคริปต์รายคืน (scripts/sync-candidates.ts) เรียกโดยไม่ส่งค่า และต้องได้ค่าเดิม
+  expect(parseLinkedInCsv(camel)[0].source).toBe('scraper')
+})
+
+test('records the source the caller passes', () => {
+  // แถวที่คนกรอกเองผ่านเทมเพลตแล้วอัปโหลดที่ /import ไม่ได้มาจาก scraper
+  // ป้ายที่ผิดจะไปโผล่ในกราฟ "ผู้สมัครตามแหล่งที่มา" ซึ่งเป็นหลักฐาน PDPA
+  expect(parseLinkedInCsv(camel, 'csv')[0].source).toBe('csv')
+})
+
+test('applies the source to every row, not just the first', () => {
+  const two = `${camel}\nMalee,Suksan,Analyst,https://linkedin.com/in/malee,Analyst,SCB,2020,,,,,,,,`
+  const rows = parseLinkedInCsv(two, 'csv')
+  expect(rows).toHaveLength(2)
+  expect(rows.map((r) => r.source)).toEqual(['csv', 'csv'])
+})
+
 test('skips rows with no name', () => {
   const csv = `firstName,lastName\n,\nSomchai,Jaidee`
   expect(parseLinkedInCsv(csv)).toHaveLength(1)
