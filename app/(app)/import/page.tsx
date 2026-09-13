@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getSession, hasRole } from '@/lib/auth/session'
 import { getServerClient } from '@/lib/supabase/server'
 import ImportForm from '@/components/ImportForm'
+import XraySearchCard from '@/components/XraySearchCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,27 @@ export default async function ImportPage() {
         <Link href="/import/suppressed" className="btn">รายชื่อระงับ</Link>
       </div>
 
-      <div className="section-header"><h2>นำเข้าด้วยตนเอง (CSV)</h2></div>
+      <div className="section-header"><h2>ขั้นที่ 1 — หาโปรไฟล์ด้วย X-ray search</h2></div>
+      <XraySearchCard />
+
+      <div className="section-header"><h2>ขั้นที่ 2 — กรอกข้อมูลลงเทมเพลต</h2></div>
+      <p className="faint" style={{ fontSize: 13 }}>
+        กรอกลงไฟล์เทมเพลตที่ดาวน์โหลดจากขั้นที่ 1 แถวที่ขาดประวัติการทำงานหรือการศึกษา
+        จะเข้า <Link href="/import/pending">คิวรอตรวจ</Link> แทนที่จะเข้าฐานผู้สมัครทันที
+      </p>
+      <p className="faint" style={{ fontSize: 13 }}>
+        <strong>สองข้อที่ผลการค้นหาของ Google ให้ไม่ครบ ต้องเปิดโปรไฟล์อ่านเอง</strong>
+        {' — '}
+        <strong>ช่วงเวลาทำงานและปีที่จบ</strong> (เช่น <code>Jan 2022 - Present</code>,
+        {' '}<code>2015 - 2019</code>) ไม่กรอกแล้วระบบจะนับประสบการณ์เป็น 0 ปี
+        แล้วคนนั้นจะหลุดตัวกรอง &ldquo;ประสบการณ์ขั้นต่ำ&rdquo; ทุกครั้งโดยไม่มีอะไรเตือน
+        {' · '}
+        และ<strong>ชื่อสถาบันให้กรอกเป็นภาษาอังกฤษ</strong> (Chulalongkorn University
+        ไม่ใช่ จุฬาลงกรณ์มหาวิทยาลัย) เพราะระบบค้นหาเทียบข้อความกับตำแหน่งงานที่เป็น
+        ภาษาอังกฤษ กรอกไทยแล้วจะจับคู่งานได้แย่ลงโดยไม่มีอาการ
+      </p>
+
+      <div className="section-header"><h2>ขั้นที่ 3 — อัปโหลดไฟล์ CSV</h2></div>
       <ImportForm />
 
       <div className="section-header"><h2>ประวัติการนำเข้า</h2></div>
