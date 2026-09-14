@@ -1,4 +1,5 @@
 import TermsOfUse from '@/components/legal/TermsOfUse'
+import PublicFooter from '@/components/public/PublicFooter'
 
 export const metadata = {
   title: 'ข้อกำหนดการใช้งาน — Skouth',
@@ -17,9 +18,7 @@ export default function TermsPage() {
         <TermsOfUse />
       </section>
 
-      <footer className="pub-footer">
-        <a href="/privacy">นโยบายความเป็นส่วนตัว</a> · <a href="/help">คู่มือการใช้งาน</a>
-      </footer>
+      <PublicFooter />
     </main>
   )
 }

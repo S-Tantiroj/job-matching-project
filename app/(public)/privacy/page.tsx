@@ -1,4 +1,5 @@
 import PrivacyPolicy from '@/components/legal/PrivacyPolicy'
+import PublicFooter from '@/components/public/PublicFooter'
 
 export const metadata = {
   title: 'นโยบายความเป็นส่วนตัว — Skouth',
@@ -17,9 +18,7 @@ export default function PrivacyPage() {
         <PrivacyPolicy />
       </section>
 
-      <footer className="pub-footer">
-        <a href="/terms">ข้อกำหนดการใช้งาน</a> · <a href="/help">คู่มือการใช้งาน</a>
-      </footer>
+      <PublicFooter />
     </main>
   )
 }

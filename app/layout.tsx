@@ -1,7 +1,8 @@
 import './globals.css'
+import { APP_NAME } from '@/lib/version'
 
 export const metadata = {
-  title: 'Skouth',
+  title: APP_NAME,
   description: 'Internal candidate sourcing and evaluation platform',
 }
 

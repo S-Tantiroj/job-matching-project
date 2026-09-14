@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PublicFooter from '@/components/public/PublicFooter'
 import { PRIMARY_CTA } from '@/lib/public/cta'
 
 export const metadata = {
@@ -80,13 +81,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="pub-footer">
-        Skouth · ระบบสรรหาและประเมินผู้สมัคร
-        <br />
-        <Link href="/terms">ข้อกำหนดการใช้งาน</Link> ·{' '}
-        <Link href="/privacy">นโยบายความเป็นส่วนตัว</Link> ·{' '}
-        <Link href="/help">คู่มือการใช้งาน</Link>
-      </footer>
+      <PublicFooter />
     </main>
   )
 }
