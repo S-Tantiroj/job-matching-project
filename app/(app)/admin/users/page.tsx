@@ -37,7 +37,7 @@ export default async function AdminUsers() {
                     <div className="muted" style={{ fontSize: 12 }}>{secondary}</div>
                   )}
                 </div>
-                <RoleSelect userId={u.id} role={u.role} />
+                <RoleSelect userId={u.id} role={u.role} isSelf={u.id === session.userId} />
               </div>
             )
           })}

@@ -13,8 +13,12 @@ export type Action =
   | 'shortlist_create'
   | 'shortlist_add'
   | 'shortlist_remove'
+  // การให้/ถอนสิทธิ์ — การกระทำที่สำคัญที่สุดในระบบ เดิมไม่เคยถูกบันทึกเลย
+  | 'role_change'
+  // เจ้าของข้อมูลใช้สิทธิ์ลบข้อมูลประเมินตัวเอง (PDPA มาตรา 33)
+  | 'self_data_delete'
 
-export type EntityType = 'candidate' | 'shortlist' | 'run'
+export type EntityType = 'candidate' | 'shortlist' | 'run' | 'user' | 'self_profile'
 
 export type ActivityInput = {
   /** null = ระบบทำเอง (cron) ไม่ใช่คน */
@@ -43,6 +47,8 @@ export const ACTION_LABELS: Record<Action, string> = {
   shortlist_create: 'สร้าง shortlist',
   shortlist_add: 'เพิ่มเข้า shortlist',
   shortlist_remove: 'เอาออกจาก shortlist',
+  role_change: 'เปลี่ยนสิทธิ์ผู้ใช้',
+  self_data_delete: 'ลบข้อมูลประเมินตัวเอง',
 }
 
 // บันทึกกิจกรรม — ห้ามทำให้งานหลักล้ม
