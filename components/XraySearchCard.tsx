@@ -1,7 +1,6 @@
 'use client'
 import { useMemo, useState } from 'react'
 import { buildXrayQuery, xraySearchUrl, type XrayScope } from '@/lib/xray/query'
-import { buildCsvTemplate, CSV_TEMPLATE_FILENAME } from '@/lib/ingest/csvTemplate'
 
 // การ์ดช่วยหาโปรไฟล์ด้วย X-ray search บน Google
 //
@@ -95,16 +94,6 @@ export default function XraySearchCard() {
     }
   }
 
-  const downloadTemplate = () => {
-    const blob = new Blob([buildCsvTemplate()], { type: 'text/csv;charset=utf-8' })
-    const href = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = href
-    a.download = CSV_TEMPLATE_FILENAME
-    a.click()
-    URL.revokeObjectURL(href)
-  }
-
   return (
     <div className="card">
       <p className="faint" style={{ fontSize: 13, marginTop: 0 }}>
@@ -182,9 +171,6 @@ export default function XraySearchCard() {
         ) : (
           <button className="btn btn-primary" disabled>เปิดใน Google</button>
         )}
-        <button className="btn" onClick={downloadTemplate}>
-          ดาวน์โหลดเทมเพลต CSV
-        </button>
       </div>
 
       <p className="faint" style={{ fontSize: 12, marginBottom: 0 }}>
