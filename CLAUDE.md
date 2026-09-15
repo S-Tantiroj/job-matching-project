@@ -182,6 +182,12 @@ Vitest does not auto-load `.env`; integration tests start with `import 'dotenv/c
 - `npx vitest run <path>` — run a test file
 - `npx tsx scripts/<file>.ts` — run a script (e.g. `scripts/test-gemini.ts`)
 - `npx tsx scripts/check-linkedin-csv.ts <path.csv>` — ตรวจ CSV จาก PhantomBuster
+- `npx tsx scripts/uat-to-doc.ts` — สร้าง `docs/uat/skouth-uat.doc` สำหรับเปิดใน Word
+  **รันซ้ำทุกครั้งที่กรอกผล UAT เพิ่ม** ไฟล์ที่แปลงไว้ล่วงหน้าจะเก่าทันที
+  ผลลัพธ์เป็น HTML ที่ตั้งนามสกุล `.doc` — `.docx` จริงเป็นไฟล์ zip ที่ต้องเขียน
+  เป็นไบนารีซึ่งทำจากเซสชันไม่ได้ · Word เปิดได้แต่เตือนเรื่องนามสกุลหนึ่งครั้ง
+  กด Yes แล้ว Save As เป็น `.docx` ต่อได้ · ตัวแปลงอยู่ที่ `lib/doc/mdToWordHtml.ts`
+  **รองรับเฉพาะไวยากรณ์ที่ไฟล์ UAT ใช้จริง** ไม่ใช่ Markdown ทั้งภาษา
 - DB migrations: run `supabase/migrations/*.sql` in the Supabase SQL editor
 
 **กับดัก: แพ็กเกจชื่อ `tsc` บน npm ไม่ใช่ TypeScript** (เจอจริง 2026-09-13)
