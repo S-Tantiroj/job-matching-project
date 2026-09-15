@@ -3,7 +3,7 @@
       xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="utf-8" />
-<title>Skouth — แบบทดสอบการยอมรับระบบ</title>
+<title>Skouth — แบบทดสอบการยอมรับระบบ (ฉบับผู้พัฒนา · ครบทุกเคส)</title>
 <style>
   body { font-family: "TH SarabunPSK", "Sarabun", Tahoma, sans-serif; font-size: 14pt; }
   h1 { font-size: 20pt; }
@@ -19,6 +19,57 @@
 </style>
 </head>
 <body>
+<p class="note"><strong>ฉบับนี้สร้างอัตโนมัติ ห้ามแก้ด้วยมือ</strong></p>
+<p class="note">แก้ที่ <code>docs/uat/skouth-uat.md</code> (เคสสำหรับผู้ใช้),</p>
+<p class="note"><code>docs/uat/skouth-uat-technical.md</code> (เคสของผู้พัฒนา) หรือ</p>
+<p class="note"><code>docs/uat/skouth-uat-dev-prep.md</code> (งานเตรียม) แล้วรัน</p>
+<p class="note"><code>npx tsx scripts/uat-to-doc.ts</code> ใหม่</p>
+<h1>งานเตรียมก่อนส่งเอกสารให้ผู้ทดสอบ</h1>
+<p class="note"><strong>ส่วนนี้มีเฉพาะในฉบับผู้พัฒนา</strong> ผู้ทดสอบทั่วไปไม่เห็นและไม่ต้องทำ</p>
+<p class="note">ทำให้เสร็จก่อน แล้วค่อยส่ง <code>skouth-uat.doc</code> ให้เขา</p>
+<p>ฉบับผู้ใช้ถูกเขียนบนสมมติฐานว่า <strong>ระบบพร้อมใช้และมีข้อมูลอยู่แล้ว</strong> เขาแค่เปิด</p>
+<p>เบราว์เซอร์แล้วทำตาม ทุกอย่างในหน้านี้คือสิ่งที่ทำให้สมมติฐานนั้นเป็นจริง</p>
+<p><strong>ข้ามข้อใดข้อหนึ่งแล้วเคสจะไม่ผ่านเพราะการเตรียม ไม่ใช่เพราะระบบผิด</strong> ซึ่งเป็น</p>
+<p>ผลลัพธ์ที่แย่ที่สุดของการทดสอบ — ใช้เวลาไล่หาบั๊กที่ไม่มีอยู่</p>
+<h2>1. เซิร์ฟเวอร์และฐานข้อมูล</h2>
+<ol>
+<li><code>npm install</code> แล้ว <code>npm run dev</code></li>
+<li>ตรวจว่า migration ใน <code>supabase/migrations/</code> ถูกรันครบใน Supabase SQL editor แล้ว</li>
+<li><code>npm test</code> ต้องเขียวทั้งหมดก่อนเริ่มทดสอบ — **เริ่ม UAT ทั้งที่ยูนิตเทสต์แดง คือการเอาคนไปเจอบั๊กที่เครื่องบอกไว้แล้ว**</li>
+</ol>
+<h2>2. ข้อมูลตัวอย่าง</h2>
+<p>```</p>
+<p>npx tsx scripts/seed-synthetic.ts</p>
+<p>npx tsx scripts/seed-jobs.ts</p>
+<p>```</p>
+<p><strong>ข้อมูลที่ได้เป็นคนสมมติทั้งหมด</strong> จึงให้ผู้ทดสอบลบได้ตามที่เคสบอก</p>
+<p class="note"><strong>DB-03 ต้องเป็นเคสสุดท้ายที่ทำ</strong> — มันสั่งลบผู้สมัครเป็นชุดราว 68 คน</p>
+<p class="note">ทำก่อนแล้วเคสค้นหาและ Shortlist ที่เหลือจะไม่มีข้อมูลให้ทำงานด้วย</p>
+<h2>3. สามบัญชี</h2>
+<p>สมัครสามบัญชีผ่านหน้า <code>/signup</code> ตามปกติ แล้วยกระดับสองใบด้วย SQL</p>
+<p>```sql</p>
+<p>update profiles set role = 'admin'        where email = 'อีเมลใบที่หนึ่ง';</p>
+<p>update profiles set role = 'data_manager' where email = 'อีเมลใบที่สอง';</p>
+<p>```</p>
+<p><strong>ต้องใช้ <code>where email = ...</code> ไม่ใช่ <code>display_name</code></strong> — จับผิดคอลัมน์จะได้</p>
+<p><code>UPDATE 0 rows</code> ซึ่ง<strong>ไม่ใช่ error</strong> แล้วจะงงว่าทำไมสิทธิ์ไม่ขึ้น (ดู migration 021)</p>
+<p>ใบที่สามปล่อยเป็น <code>member</code> ตามค่าตั้งต้น</p>
+<p>จากนั้น<strong>กรอกอีเมลและรหัสผ่านทั้งสามใบลงตาราง "บัญชีสำหรับทดสอบ" ในฉบับผู้ใช้</strong></p>
+<p>พร้อมที่อยู่ของระบบ — ตารางนั้นจงใจเว้นว่างไว้ให้กรอก</p>
+<h2>4. สองไฟล์ที่ต้องแนบไปกับเอกสาร</h2>
+<ol>
+<li><strong>CSV ตัวอย่าง</strong> — ใช้ไฟล์ใน <code>docs/manual-tests/</code> ได้เลย (ชื่อสมมติทั้งหมด) ตรวจก่อนส่งด้วย <code>npx tsx scripts/check-linkedin-csv.ts &lt;path.csv&gt;</code> สคริปต์นี้ไม่แตะฐานข้อมูล ไม่เรียก Gemini ไม่ต่อเน็ต รันซ้ำได้ฟรี <strong>ดูรายงาน "คอลัมน์ที่ไม่รู้จัก" เป็นหลัก</strong> — คอลัมน์ที่ parser ไม่อ่านจะหายเงียบๆ ไม่มี error ไม่มีคำเตือน</li>
+<li><strong>เรซูเม่ PDF</strong> หนึ่งฉบับสำหรับเคสประเมินตัวเอง <strong>ห้ามใช้ CV ของคนจริงที่ไม่ได้ยินยอม และห้ามวางไฟล์ไว้ใน repo</strong></li>
+</ol>
+<h2>5. ตรวจก่อนกดส่ง</h2>
+<p>- [ ] เปิดที่อยู่ของระบบจากเครื่องอื่นได้จริง ไม่ใช่แค่ <code>localhost</code> บนเครื่องตัวเอง</p>
+<p>- [ ] ล็อกอินด้วยทั้งสามบัญชีได้ และเมนูที่เห็นต่างกันจริงตามระดับ</p>
+<p>- [ ] อีเมลยืนยันการสมัครส่งถึงจริง (เคส AU-01, AU-03, AU-05 ขึ้นกับข้อนี้ทั้งหมด)</p>
+<p>- [ ] ตาราง "บัญชีสำหรับทดสอบ" และ "ที่อยู่ของระบบ" ในฉบับผู้ใช้กรอกครบแล้ว</p>
+<p>- [ ] แนบไฟล์ CSV และ PDF ไปด้วยแล้ว</p>
+<p>- [ ] <code>git rev-parse --short HEAD</code> จดไว้แล้ว — **ผลทดสอบที่ไม่รู้ว่าทดสอบโค้ดชุดไหน</p>
+<p>ย้อนกลับไปหาสาเหตุไม่ได้**</p>
+<hr />
 <h1>Skouth — คู่มือการใช้งานและแบบทดสอบการยอมรับระบบ</h1>
 <p>ระบบเวอร์ชัน 1.0.0</p>
 <p><strong>ผู้ทดสอบ:</strong> ______________________  <strong>วันที่ทดสอบ:</strong> ______________</p>
@@ -226,6 +277,94 @@
 <p>_______________________________________________</p>
 <p>_______________________________________________</p>
 <p>ลงชื่อผู้ทดสอบ: ______________________</p>
-<p class="note">สร้างจาก <code>docs/uat/skouth-uat.md</code> · ระบบ Skouth v1.0.0</p>
+<hr />
+<h1>ส่วนเพิ่มเติมสำหรับผู้พัฒนา</h1>
+<p class="note"><strong>ไฟล์นี้เป็นส่วนหนึ่งของเอกสาร ไม่ใช่เอกสารทั้งฉบับ</strong></p>
+<p class="note">มีเฉพาะเคสที่ผู้ใช้ทั่วไปทำไม่ได้ · เคสที่เหลืออยู่ใน <code>skouth-uat.md</code></p>
+<p class="note"><strong>ฉบับผู้พัฒนาที่มีครบทุกเคสคือ <code>skouth-uat-dev.doc</code></strong> ซึ่งสร้างจากสองไฟล์นี้ด้วย</p>
+<p class="note"><code>npx tsx scripts/uat-to-doc.ts</code> — ผู้พัฒนาทำทั้งฉบับนั้น ไม่ใช่แค่ไฟล์นี้</p>
+<p><strong>เวอร์ชันที่ทดสอบ (<code>git rev-parse --short HEAD</code>):</strong> ______________</p>
+<hr />
+<h2>ทำไมเคสชุดนี้ถึงแยกไฟล์ไว้</h2>
+<p><code>skouth-uat.md</code> ออกแบบให้ผู้ใช้ทั่วไปทดสอบเองได้ด้วยเบราว์เซอร์อย่างเดียว</p>
+<p>เคสในไฟล์นี้ทำแบบนั้นไม่ได้ เพราะต้อง<strong>ยิงคำขอตรงไปที่ API โดยไม่ผ่านหน้าจอ</strong></p>
+<p>หรือ<strong>ทำให้บริการภายนอกล้มเหลวชั่วคราว</strong> — จึงส่งให้ผู้ทดสอบภายนอกทำไม่ได้</p>
+<p>แต่ก็<strong>ตัดทิ้งไม่ได้</strong> และเป็นเหตุผลที่ผู้พัฒนาต้องทำเอกสารฉบับรวม ไม่ใช่ทำแค่ไฟล์นี้</p>
+<p>ส่วนใหญ่ของเคสที่นี่เป็นด่านความปลอดภัยที่หน้าจอปิดไว้แล้ว <strong>แต่หน้าจอไม่ใช่ด่านจริง</strong></p>
+<p>ถ้าทดสอบแค่ว่า "กดในหน้าเว็บไม่ได้" ก็เท่ากับไม่ได้ทดสอบด่านเลย</p>
+<p>เป็นหลักการเดียวกับ <code>019_lock_profile_columns.int.test.ts</code> ที่สร้างบัญชีจริงแล้วยิง</p>
+<p>PostgREST ตรงๆ แทนการดูว่าหน้าจอมีช่องให้แก้ไหม</p>
+<p>ตารางนี้เขียนรหัสเคสในเครื่องหมาย `<code> </code> `` โดยตั้งใจ — สคริปต์นับจำนวนเคสด้วยรูปแบบ</p>
+<p><code>| XX-00 |</code> ที่ต้นบรรทัด เขียนเปล่าๆ ตรงนี้แล้วยอดรวมจะถูกนับซ้ำเป็นสองเท่า</p>
+<table>
+<tr><th>เคส</th><th>ครอบด้วยเทสต์อัตโนมัติไหม</th></tr>
+<tr><td><code>AD-02</code></td><td><strong>ไม่</strong> — <code>checkRoleChange</code> มีเทสต์ แต่ไม่มีอะไรยืนยันว่า route เรียกใช้จริง</td></tr>
+<tr><td><code>ST-11</code></td><td>บางส่วน — <code>route.delete.test.ts</code> ใช้ mock ซึ่งพิสูจน์ลอจิกได้ ไม่พิสูจน์ของจริง</td></tr>
+<tr><td><code>ST-12</code></td><td><strong>ไม่มีเลย</strong> — <code>score/route.ts</code> ไม่มีไฟล์เทสต์ พิสูจน์แล้วด้วย break check 14 ก.ย.</td></tr>
+<tr><td><code>SR-05</code></td><td><strong>ไม่</strong> — ไม่มีทางทำให้ Gemini ล้มตามสั่งในเทสต์</td></tr>
+</table>
+<hr />
+<h2>วิธียิงคำขอตรง</h2>
+<p>เปิด DevTools (F12) → แท็บ <strong>Console</strong> ขณะที่<strong>ล็อกอินอยู่ในบัญชีที่เคสระบุ</strong></p>
+<p>แล้ววางคำสั่งของแต่ละเคส คุกกี้ของเซสชันจะติดไปกับคำขอเอง</p>
+<p>ดูสองอย่างในผลลัพธ์: <strong>สถานะ (status)</strong> และ <strong>ข้อความที่คืนมา</strong></p>
+<hr />
+<h2>เคส</h2>
+<table>
+<tr><th>รหัส</th><th>ส่วน</th><th>ขั้นตอน</th><th>ผลที่คาดหวัง</th><th>ผล</th><th>หมายเหตุ</th></tr>
+<tr><td>AD-02</td><td>จัดการผู้ใช้ · ป้องกันการล็อกตัวเอง</td><td>ล็อกอินเป็น <strong>แอดมิน</strong> แล้วรันคำสั่ง A ข้างล่าง โดยแทน <code>&lt;ID ของตัวเอง&gt;</code> ด้วย uuid ของตัวเอง (ดูได้จาก URL หรือ <code>/admin/users</code>)</td><td><strong>status 400</strong> พร้อมข้อความที่มีคำว่า "ตัวเอง" · จากนั้นรีเฟรช <code>/admin/users</code> แล้ว<strong>สิทธิ์ยังเป็น admin เหมือนเดิม</strong> — ด่านจริงอยู่ที่เซิร์ฟเวอร์ ไม่ใช่ที่ช่องเลือกที่ถูกปิดไว้</td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
+<tr><td>ST-11</td><td>ประเมินตัวเอง · สิทธิ์เจ้าของข้อมูล</td><td>ให้บัญชี A อัปโหลดเรซูเม่แล้วจด id จาก URL · ล็อกอินเป็น <strong>บัญชี B</strong> แล้วรันคำสั่ง B</td><td><strong>status 404 ไม่ใช่ 403</strong> — 403 เท่ากับยืนยันว่า id นี้มีอยู่จริง ซึ่งเป็นการรั่วข้อมูลในตัวมันเอง · กลับไปเช็คบัญชี A <strong>ข้อมูลยังอยู่ครบ</strong></td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
+<tr><td>ST-12</td><td>ประเมินตัวเอง · สิทธิ์เจ้าของข้อมูล</td><td>ยังอยู่ในบัญชี B รันคำสั่ง C ด้วย id เดียวกับ ST-11</td><td><strong>status 404</strong> และ<strong>ไม่มีคะแนนหรือข้อความวิเคราะห์ของบัญชี A คืนมาเลย</strong></td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
+<tr><td>SR-05</td><td>ค้นหา · เมื่อ AI ล่ม</td><td>ทำตามขั้นตอนใน "วิธีทำให้ AI ล่มชั่วคราว" ข้างล่าง แล้วค้นหาอะไรก็ได้</td><td><strong>ยังค้นหาได้และเห็นผลลัพธ์</strong> เพียงแต่ไม่มีชิปเงื่อนไขที่ AI แยกให้ · <strong>ไม่ใช่หน้าขาวหรือข้อความ error ทั้งหน้า</strong></td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
+</table>
+<hr />
+<h2>คำสั่ง</h2>
+<p><strong>A — AD-02 (ลดสิทธิ์ตัวเอง)</strong></p>
+<p>```js</p>
+<p>await fetch('/api/admin/users', {</p>
+<p>method: 'POST',</p>
+<p>headers: { 'content-type': 'application/json' },</p>
+<p>body: JSON.stringify({ userId: '&lt;ID ของตัวเอง&gt;', role: 'member' }),</p>
+<p>}).then(async r =&gt; ({ status: r.status, body: await r.json() }))</p>
+<p>```</p>
+<p><strong>B — ST-11 (ลบข้อมูลของคนอื่น)</strong></p>
+<p>```js</p>
+<p>await fetch('/api/self-assessment/&lt;ID ของบัญชี A&gt;', { method: 'DELETE' })</p>
+<p>.then(async r =&gt; ({ status: r.status, body: await r.json() }))</p>
+<p>```</p>
+<p><strong>C — ST-12 (อ่านผลประเมินของคนอื่น)</strong></p>
+<p>```js</p>
+<p>await fetch('/api/self-assessment/&lt;ID ของบัญชี A&gt;/score', {</p>
+<p>method: 'POST',</p>
+<p>headers: { 'content-type': 'application/json' },</p>
+<p>body: JSON.stringify({ requirement: 'Data Scientist' }),</p>
+<p>}).then(async r =&gt; ({ status: r.status, body: await r.json() }))</p>
+<p>```</p>
+<hr />
+<h2>วิธีทำให้ AI ล่มชั่วคราว (SR-05)</h2>
+<ol>
+<li>เปิดไฟล์ <code>.env</code> ที่รากโปรเจกต์</li>
+<li>แก้ <code>GEMINI_API_KEY</code> เป็นค่าที่ใช้ไม่ได้ เช่น <code>GEMINI_API_KEY=broken</code></li>
+<li><strong>ปิดเซิร์ฟเวอร์แล้วเปิดใหม่</strong> (<code>Ctrl+C</code> แล้ว <code>npm run dev</code>) — Next.js อ่าน <code>.env</code> ตอนเริ่มเท่านั้น ไม่แก้ตามระหว่างทาง</li>
+<li>ค้นหาที่หน้า <code>/search</code> แล้วบันทึกผล</li>
+<li><strong>คืนคีย์เดิมแล้วรีสตาร์ทอีกครั้ง</strong> ก่อนทำอะไรต่อ</li>
+</ol>
+<p class="note"><strong>ห้าม commit <code>.env</code> ที่แก้แล้ว</strong> — ไฟล์นี้อยู่ใน <code>.gitignore</code> อยู่แล้ว</p>
+<p class="note">แต่ให้ยืนยันด้วย <code>git status</code> ว่ามันไม่โผล่ขึ้นมาก่อนไปต่อ</p>
+<hr />
+<h2>สรุปเฉพาะส่วนนี้</h2>
+<p>ผ่าน: ______   ไม่ผ่าน: ______</p>
+<p><strong>ไม่เขียนจำนวนเคสไว้ตรงนี้โดยตั้งใจ</strong> — ตัวเลขที่พิมพ์ทิ้งไว้จะค้างที่ค่าเดิม</p>
+<p>ทุกครั้งที่เพิ่มเคส แล้วเอกสารจะโกหกโดยไม่มีใครสังเกต ยอดรวมทั้งฉบับถูกนับจาก</p>
+<p>เนื้อหาจริงตอนสร้าง <code>skouth-uat-dev.doc</code> (ดู <code>lib/doc/mergeUat.ts</code>)</p>
+<p>ความเห็นเพิ่มเติมเกี่ยวกับส่วนนี้:</p>
+<p>_______________________________________________</p>
+<p>_______________________________________________</p>
+<hr />
+<h2>รวมทั้งสองส่วน</h2>
+<p>เคสสำหรับผู้ใช้: 87   เคสของผู้พัฒนา: 4   <strong>รวม: 91</strong></p>
+<p>ผ่านทั้งหมด: ______   ไม่ผ่านทั้งหมด: ______</p>
+<p>ลงชื่อผู้พัฒนา: ______________________</p>
+<p class="note">สร้างจาก <code>skouth-uat-dev-prep.md + skouth-uat.md + skouth-uat-technical.md</code> · ระบบ Skouth v1.0.0</p>
 </body>
 </html>
