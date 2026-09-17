@@ -80,7 +80,7 @@ export default function DisplayNameCard() {
         value={name}
         maxLength={DISPLAY_NAME_MAX}
         onChange={(e) => setName(e.target.value)}
-        placeholder="เช่น สิวกร ต."
+        placeholder="เช่น สมใจ แซ่แต้"
         disabled={!loaded || busy}
       />
       <div className="row" style={{ marginTop: 12 }}>

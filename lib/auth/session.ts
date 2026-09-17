@@ -1,3 +1,5 @@
+import { decideAccess } from './profileGate'
+
 export type Role = 'admin' | 'data_manager' | 'member'
 
 // ลำดับชั้นสิทธิ์: ตัวเลขสูงกว่าผ่านประตูของตัวเลขต่ำกว่าได้ทั้งหมด
@@ -38,6 +40,26 @@ export async function getSession(): Promise<{ userId: string; role: Role } | nul
   } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  return { userId: user.id, role: ((p as any)?.role ?? 'member') as Role }
+  const { data: p, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  // **ไม่มีแถวใน profiles = ไม่มีสิทธิ์ ไม่ใช่ member** ดูเหตุผลเต็มใน profileGate.ts
+  // คืน null เหมือนตอนไม่ได้ล็อกอิน เพราะผู้เรียกทั้ง 40 ที่จัดการกรณีนั้นอยู่แล้ว
+  // (เด้งไป /login หรือตอบ 401) การเปลี่ยนชนิดข้อมูลที่คืนจะกระทบทุกไฟล์พร้อมกัน
+  // **หน้า /login เป็นที่เดียวที่รู้เหตุผลและบอกผู้ใช้** ไม่งั้นจะวนลูป
+  // ล็อกอินสำเร็จ → ถูกเด้งกลับมาหน้าล็อกอิน → ล็อกอินสำเร็จอีก
+  const decision = decideAccess(p, !!error)
+  if (!decision.allowed) {
+    // log ฝั่งเซิร์ฟเวอร์ไว้ให้ครบ ผู้ใช้เห็นแค่ข้อความกลาง
+    console.error('[auth] ปฏิเสธการเข้าถึง', {
+      userId: user.id,
+      reason: decision.reason,
+      error: error?.message,
+    })
+    return null
+  }
+  return { userId: user.id, role: decision.role }
 }
