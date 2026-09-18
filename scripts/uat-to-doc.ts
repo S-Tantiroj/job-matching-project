@@ -51,7 +51,19 @@ for (const doc of DOCS) {
   // ตรวจสอบย้อนกลับไม่ได้ (ดู lib/version.ts)
   const stamp = `<p class="note">สร้างจาก <code>${doc.from}</code> · ระบบ ${versionLabel()}</p>`
 
-  writeFileSync(out, wrapWordHtml(doc.title, `${mdToHtmlBody(doc.md)}\n${stamp}`), 'utf8')
+  // **EBUSY บน Windows แปลว่าไฟล์เปิดค้างอยู่ใน Word ไม่ใช่โค้ดพัง**
+  // stack trace ของ Node ไม่ได้บอกเรื่องนั้นเลย และเป็นสิ่งที่เจอซ้ำแน่นอน
+  // ระหว่างรอบแก้เอกสาร — ข้อความที่บอกว่าต้องทำอะไรต่อมีค่ากว่าที่มาของ error
+  try {
+    writeFileSync(out, wrapWordHtml(doc.title, `${mdToHtmlBody(doc.md)}\n${stamp}`), 'utf8')
+  } catch (e: any) {
+    if (e?.code === 'EBUSY' || e?.code === 'EPERM') {
+      console.error(`\nเขียน ${doc.file} ไม่ได้ — ไฟล์กำลังเปิดอยู่ในโปรแกรมอื่น`)
+      console.error('ปิดไฟล์ใน Word แล้วรันคำสั่งนี้ใหม่\n')
+      process.exit(1)
+    }
+    throw e
+  }
 
   const rows = (doc.md.match(/^\| [A-Z]{2}-\d\d \|/gm) ?? []).length
   console.log(`เขียนแล้ว: ${out}  (${rows} เคส)`)
