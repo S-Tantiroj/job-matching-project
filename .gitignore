@@ -2,6 +2,12 @@
 venv/
 Supabase Password.txt
 node_modules/
+
+# ไฟล์ล็อกของ Word — สร้างขึ้นตอนเปิดไฟล์ .doc ค้างไว้ และหลุดเข้า git ไปแล้วครั้งหนึ่ง
+# (docs/uat/~$outh-uat-dev.doc เมื่อ 18 ก.ย. 2026) เป็นไฟล์ชั่วคราวที่ไม่มีประโยชน์
+# และอาจมีชื่อผู้ใช้ของเครื่องอยู่ข้างใน
+~$*
+
 .next/
 .superpowers/
 .claude/
