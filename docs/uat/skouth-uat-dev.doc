@@ -330,7 +330,7 @@
 <tr><td>SR-05</td><td>ค้นหา · เมื่อ AI ล่ม</td><td>ทำตามขั้นตอนใน "วิธีทำให้ AI ล่มชั่วคราว" ข้างล่าง แล้วค้นหาอะไรก็ได้</td><td><strong>ยังค้นหาได้และเห็นผลลัพธ์</strong> เพียงแต่ไม่มีชิปเงื่อนไขที่ AI แยกให้ · <strong>ไม่ใช่หน้าขาวหรือข้อความ error ทั้งหน้า</strong></td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
 <tr><td>SA-02</td><td>ประเมินตัวเอง · ชนิดไฟล์</td><td>ล็อกอินด้วยบัญชีใดก็ได้ แล้วรันคำสั่ง D</td><td><strong>status 400</strong> พร้อมข้อความว่ารับเฉพาะ PDF · <strong>ห้ามเป็น 500</strong> เพราะแปลว่าไฟล์ผ่านด่านเข้าไปแล้วไปพังที่ Gemini ซึ่งเสียเงินค่า token ฟรี</td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
 <tr><td>JB-11</td><td>ตำแหน่งงาน · เพดานความยาว</td><td>ล็อกอินเป็น <strong>data_manager ขึ้นไป</strong> แล้วรันคำสั่ง E</td><td><strong>status 400</strong> พร้อมข้อความที่<strong>บอกจำนวนตัวอักษรสูงสุด</strong> · ห้ามเป็น "ระบบมีปัญหาชั่วคราว กรุณาลองใหม่" ซึ่งชวนให้กดซ้ำทั้งที่ลองกี่ครั้งก็ล้มเหมือนเดิม</td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
-<tr><td>ST-13</td><td>ตั้งค่า · เพดานความยาว</td><td>รันคำสั่ง F แล้วเปิด <code>/admin/users</code> ด้วยบัญชีแอดมินเพื่อดูผล</td><td><strong>คาดว่าจะไม่ผ่าน — ดูหมายเหตุข้างล่าง</strong> ชื่อยาว 500 ตัวถูกบันทึกสำเร็จ แล้วไปทำให้แถวใน <code>/admin/users</code> และบันทึกกิจกรรมเสียรูป</td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
+<tr><td>ST-13</td><td>ตั้งค่า · เพดานความยาว</td><td>ตรวจสามอย่างตาม "วิธีตรวจ ST-13" ข้างล่าง</td><td><strong>ต้องมีด่านความยาวอย่างน้อยหนึ่งชั้นนอกเหนือจากฟอร์ม</strong> · <strong>ผลที่ได้จริง 18 ก.ย.: ไม่มีเลยสักชั้น → ไม่ผ่าน</strong></td><td>☐ ผ่าน ☐ ไม่ผ่าน</td><td></td></tr>
 </table>
 <p class="note"><strong>ST-13 เป็นเคสที่รู้อยู่แล้วว่าจะไม่ผ่าน และนั่นคือเหตุผลที่มันอยู่ที่นี่</strong></p>
 <p class="note"></p>
@@ -384,21 +384,35 @@
 <p>body: JSON.stringify({ title: 'ก'.repeat(256), description: 'ทดสอบเพดานความยาว' }),</p>
 <p>}).then(async r =&gt; ({ status: r.status, body: await r.json() }))</p>
 <p>```</p>
-<p><strong>F — ST-13 (ชื่อที่แสดงยาวเกินเพดาน)</strong></p>
-<p>ข้อนี้<strong>ไม่ได้ยิง API ของแอป</strong> เพราะไม่มี route ให้ยิง — เขียนลงตารางตรงผ่าน</p>
-<p>ไคลเอนต์ของ Supabase เหมือนที่หน้า <code>/settings</code> ทำ ต้องรันขณะเปิดหน้าใดหน้าหนึ่ง</p>
-<p>ของแอปอยู่ เพื่อให้ตัวไคลเอนต์ถูกโหลดแล้ว</p>
-<p>```js</p>
-<p>const { createClient } = await import('@supabase/supabase-js')</p>
-<p>const sb = createClient(</p>
-<p>process.env.NEXT_PUBLIC_SUPABASE_URL,</p>
-<p>process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY</p>
-<p>)</p>
-<p>const { data: { user } } = await sb.auth.getUser()</p>
-<p>await sb.from('profiles').update({ display_name: 'ก'.repeat(500) }).eq('id', user.id)</p>
+<h2>วิธีตรวจ ST-13</h2>
+<p>ข้อนี้<strong>ตรวจด้วยการอ่านโครงระบบ ไม่ใช่ยิงคำขอ</strong> เพราะสิ่งที่ต้องพิสูจน์คือ</p>
+<p>"ไม่มีด่านอยู่" ซึ่งการยิงสำเร็จหนึ่งครั้งพิสูจน์ได้อ่อนกว่าการแสดงว่าทุกชั้นไม่มีด่าน</p>
+<p><strong>ชั้นที่ 1 — ไม่มี route ของแอปที่เขียนคอลัมน์นี้</strong></p>
 <p>```</p>
-<p class="note"><strong>ตั้งชื่อกลับเป็นค่าเดิมทันทีหลังทดสอบ</strong> ไม่งั้นแถวของคุณใน <code>/admin/users</code></p>
-<p class="note">กับบันทึกกิจกรรมจะเสียรูปไปตลอด</p>
+<p>npx tsx -e "0" ; findstr /s /i "display_name" app\api\*.ts</p>
+<p>```</p>
+<p>ผลที่ได้จริง: เจอเฉพาะ <code>app/api/admin/users/route.ts</code> ซึ่ง<strong>อ่าน</strong>ไปทำบันทึกกิจกรรม</p>
+<p>ไม่มีที่ไหน <code>update</code> เลย · <code>components/DisplayNameCard.tsx</code> เขียนลง PostgREST ตรง</p>
+<p><strong>ชั้นที่ 2 — คอลัมน์ไม่มีเพดานและไม่มี CHECK</strong> (รันใน Supabase SQL editor)</p>
+<p>```sql</p>
+<p>select data_type, character_maximum_length from information_schema.columns</p>
+<p>where table_schema='public' and table_name='profiles' and column_name='display_name';</p>
+<p>```</p>
+<p>ผลที่ได้จริง 18 ก.ย.: <code>text</code> · <code>character_maximum_length</code> เป็น <code>null</code> · CHECK 0 ตัว</p>
+<p><strong>ชั้นที่ 3 — สิทธิ์เขียนเปิดให้ผู้ใช้โดยตรง</strong> อ่าน <code>migration 019</code> บรรทัด</p>
+<p><code>grant update (display_name, settings) on public.profiles to authenticated</code></p>
+<p><strong>สรุป: ด่านเดียวที่มีคือ <code>maxLength</code> ในฟอร์ม ซึ่งกันได้แค่การพิมพ์และการวาง</strong></p>
+<hr />
+<h3>ถ้าอยากสาธิตให้เห็นกับตา (ไม่บังคับ)</h3>
+<p><code>Copy as fetch</code> จาก Network แล้ววางใน Console — **ต้องลบ <code>"credentials": "include"</code></p>
+<p>ออกก่อน** ไม่งั้นโดน CORS บล็อก เพราะ Supabase ตอบ <code>Access-Control-Allow-Origin: *</code></p>
+<p>ซึ่งเบราว์เซอร์ห้ามใช้คู่กับ credentials mode <code>include</code> · และตอนแก้ค่า <code>display_name</code></p>
+<p>ให้ระวังไม่ไปทับ token ที่อยู่ใน header ซึ่งหน้าตาคล้ายกัน (<code>eyJhbGci...</code>)</p>
+<p><strong>สองกับดักนี้เจอจริงทั้งคู่เมื่อ 18 ก.ย.</strong> และ<code>import('@supabase/supabase-js')</code></p>
+<p>ใน Console ก็ใช้ไม่ได้ เพราะแก้ชื่อโมดูลเปล่าๆ ไม่ได้ในบริบทนั้น</p>
+<p>— รวมสามทางที่ไม่เวิร์ค จึงเปลี่ยนมาตรวจด้วยการอ่านโครงระบบแทน</p>
+<p class="note">ถ้าสาธิตแล้วบันทึกสำเร็จจริง <strong>ตั้งชื่อกลับเป็นค่าเดิมทันที</strong> ไม่งั้นแถวของคุณ</p>
+<p class="note">ใน <code>/admin/users</code> กับบันทึกกิจกรรมจะเสียรูปไปตลอด</p>
 <hr />
 <h2>วิธีทำให้ AI ล่มชั่วคราว (SR-05)</h2>
 <ol>
