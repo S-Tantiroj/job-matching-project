@@ -1017,6 +1017,12 @@ From the Cowork Linux sandbox, this drive is mounted read-mostly:
   and **`npx tsx`** (esbuild wants `@esbuild/linux-x64`). Run those on Windows.
 - **`npm run typecheck` DOES work** and is the strongest check available in a
   session. **Baseline: 0 errors across the whole project — ไม่ต้องกรองอะไรทั้งนั้น**
+  **แต่ baseline นี้ค้างอยู่ได้ถ้าไม่มีใครรัน** — 18 ก.ย. 2026 พบ TS2554 ค้างอยู่
+  หนึ่งตัวใน `route.delete.test.ts` ตั้งแต่ 14 ก.ย. `vi.fn(async () => {})`
+  ทำให้ TS อนุมานว่า mock รับ 0 อาร์กิวเมนต์ แล้วบรรทัดที่เรียก `logMock(i)` แดง
+  **ตอนรันไม่พังเพราะ JS เมินอาร์กิวเมนต์เกิน `npm test` จึงเขียวตลอดสี่วัน**
+  → **`npm test` เขียวไม่ได้แปลว่า typecheck เขียว ต้องรันทั้งสองอย่างเสมอ**
+  (ลงชนิดของพารามิเตอร์ใน `vi.fn` เมื่อ mock นั้นถูกเรียกพร้อมอาร์กิวเมนต์)
   (เปลี่ยนเมื่อ 2026-09-13 · ก่อนหน้านี้มี ~500 error ในไฟล์ `*.test.ts` และคำแนะนำ
   ในไฟล์นี้เคยบอกให้กรองด้วย `| grep -v "\.test\.ts"`)
   **`vitest-globals.d.ts` ที่รากโปรเจกต์คือสิ่งที่ทำให้เป็น 0** — `vitest.config.ts`

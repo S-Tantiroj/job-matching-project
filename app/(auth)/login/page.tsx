@@ -1,4 +1,5 @@
 'use client'
+import { authErrorMessage } from '@/lib/auth/authMessages'
 import { accessDeniedMessage, decideAccess } from '@/lib/auth/profileGate'
 import { getBrowserClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
@@ -19,7 +20,7 @@ export default function Login() {
     setMsg('')
     const sb = getBrowserClient()
     const { data, error } = await sb.auth.signInWithPassword({ email, password: pw })
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(authErrorMessage(error.message))
 
     // **ด่านนี้อยู่ที่นี่เพื่อกันการวนลูป ไม่ใช่เพื่อความปลอดภัย**
     // ด่านจริงคือ `getSession()` ฝั่งเซิร์ฟเวอร์ ซึ่งคืน null เมื่อไม่มีแถวใน profiles
@@ -57,6 +58,9 @@ export default function Login() {
         {msg && <p style={{ color: 'var(--bad)', margin: 0 }}>{msg}</p>}
         <a href="/forgot-password">ลืมรหัสผ่าน?</a>
         <a href="/signup">ยังไม่มีบัญชี? สมัครสมาชิก</a>
+        {/* หน้าแรกเปิดได้โดยไม่ต้องล็อกอินโดยตั้งใจ (ดู middleware matcher)
+            ไม่มีลิงก์นี้ สามหน้า auth จะเป็นทางตันสำหรับคนที่แค่อยากดูว่าเว็บนี้คืออะไร */}
+        <a href="/" className="faint">← กลับหน้าแรก</a>
       </div>
     </main>
   )

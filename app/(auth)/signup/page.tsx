@@ -1,4 +1,5 @@
 'use client'
+import { authErrorMessage } from '@/lib/auth/authMessages'
 import { getBrowserClient } from '@/lib/supabase/client'
 import { isExistingUser } from '@/lib/auth/signupFlow'
 import { useState } from 'react'
@@ -20,11 +21,21 @@ export default function SignUp() {
       options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
     })
     setBusy(false)
-    if (error) return setMsg(error.message)
+    if (error) return setMsg(authErrorMessage(error.message))
 
     // ดู lib/auth/signupFlow.ts สำหรับเหตุผลว่าทำไมต้องตรวจจาก identities
+    //
+    // **ข้อความนี้ต้องพูดถึงบัญชีที่ยังไม่ยืนยันด้วย** — ยืนยันแล้วเมื่อ 18 ก.ย. ว่า
+    // การสมัครซ้ำทำให้ Supabase **ส่งลิงก์ยืนยันฉบับใหม่จริง** (อีเมลสองฉบับเข้ามา
+    // ห่างกัน 13 นาที และฉบับที่สองกดแล้วเข้า /dashboard ได้)
+    // ข้อความเดิมบอกแค่ให้ล็อกอินหรือกดลืมรหัสผ่าน ซึ่ง**ชี้ไปทางตันทั้งสองทาง
+    // สำหรับคนที่ยังไม่ยืนยัน** ทั้งที่ลิงก์ใหม่เพิ่งถูกส่งไปแล้วในวินาทีนั้น
     if (isExistingUser(data.user)) {
-      return setMsg('อีเมลนี้ถูกใช้สมัครแล้ว กรุณาเข้าสู่ระบบ หรือกด "ลืมรหัสผ่าน" หากจำรหัสไม่ได้')
+      return setMsg(
+        'อีเมลนี้ถูกใช้สมัครแล้ว — ถ้ายืนยันอีเมลไปแล้ว ให้เข้าสู่ระบบ ' +
+          'หรือกด "ลืมรหัสผ่าน" หากจำรหัสไม่ได้ · ถ้ายังไม่เคยยืนยัน ' +
+          'เราเพิ่งส่งลิงก์ยืนยันฉบับใหม่ไปให้แล้ว กรุณาตรวจกล่องจดหมาย'
+      )
     }
 
     // เมื่อเปิด "Confirm email" ใน Supabase การสมัครจะยังไม่ให้ session กลับมา
@@ -72,6 +83,7 @@ export default function SignUp() {
           <a href="/privacy">นโยบายความเป็นส่วนตัว</a>
         </p>
         <a href="/login">มีบัญชีแล้ว? เข้าสู่ระบบ</a>
+        <a href="/" className="faint">← กลับหน้าแรก</a>
       </div>
     </main>
   )

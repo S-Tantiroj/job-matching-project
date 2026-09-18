@@ -40,7 +40,10 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }))
 
-const logMock = vi.fn(async () => {})
+// **ต้องประกาศพารามิเตอร์ให้ตรงกับที่เรียกจริง** — `vi.fn(async () => {})`
+// ทำให้ TS อนุมานว่ารับ 0 อาร์กิวเมนต์ แล้ว `logMock(i)` ข้างล่างเป็น TS2554
+// ตอนรันไม่พังเพราะ JS เมินอาร์กิวเมนต์เกิน เทสต์จึงเขียวทั้งที่ typecheck แดง
+const logMock = vi.fn(async (_input?: unknown) => {})
 vi.mock('@/lib/activity/log', () => ({ logActivity: (i: any) => logMock(i) }))
 
 import { DELETE } from './[id]/route'

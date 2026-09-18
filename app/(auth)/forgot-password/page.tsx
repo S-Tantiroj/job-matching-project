@@ -29,6 +29,7 @@ export default function ForgotPassword() {
               ถ้าอีเมลนี้มีบัญชีอยู่ในระบบ เราได้ส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้แล้ว กรุณาตรวจกล่องจดหมาย
             </p>
             <a href="/login">กลับไปหน้าเข้าสู่ระบบ</a>
+            <a href="/" className="faint">← กลับหน้าแรก</a>
           </>
         ) : (
           <>
@@ -44,6 +45,7 @@ export default function ForgotPassword() {
               {busy ? 'กำลังส่ง…' : 'ส่งลิงก์รีเซ็ต'}
             </button>
             <a href="/login">กลับไปหน้าเข้าสู่ระบบ</a>
+            <a href="/" className="faint">← กลับหน้าแรก</a>
           </>
         )}
       </div>
