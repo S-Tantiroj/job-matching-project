@@ -16,6 +16,7 @@ export default function SearchPage() {
   // (เหตุผลเต็มอยู่ใน lib/search/mergeFilters.ts)
   const [aiOwned, setAiOwned] = useState<AiOwned>(NO_AI_FILTERS)
   const [res, setRes] = useState<any[]>([])
+  const [unusedSkills, setUnusedSkills] = useState<string[]>([])
   const [parsing, setParsing] = useState(false)
   const [searching, setSearching] = useState(false)
   const [ran, setRan] = useState(false)
@@ -44,6 +45,7 @@ export default function SearchPage() {
       // ต้องแยกให้ผู้ใช้เห็น
       if (!r.ok) {
         setRes([])
+        setUnusedSkills([])
         setErr(
           r.status === 401
             ? 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง'
@@ -52,15 +54,20 @@ export default function SearchPage() {
         return
       }
       const json = await r.json()
-      if (!Array.isArray(json)) {
+      if (!json || !Array.isArray(json.results)) {
         setRes([])
+        setUnusedSkills([])
         setErr('ค้นหาไม่สำเร็จ ระบบตอบกลับในรูปแบบที่ไม่คาดคิด กรุณาแจ้งผู้ดูแลระบบ')
         return
       }
-      setRes(json)
+      setRes(json.results)
+      // ชิปสกิลที่ไม่มีในฐาน — ต้องบอกผู้ใช้ ไม่งั้นผลลัพธ์จะไม่ตรงกับชิปที่เห็นบนจอ
+      // โดยไม่มีอะไรอธิบาย (ดู lib/search/knownSkills.ts)
+      setUnusedSkills(Array.isArray(json.unusedSkills) ? json.unusedSkills : [])
     } catch {
       // เครือข่ายขาดหรือเซิร์ฟเวอร์ไม่ตอบ — ยังต้องไม่ทำให้ดูเหมือนไม่มีผลลัพธ์
       setRes([])
+      setUnusedSkills([])
       setErr('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่')
     } finally {
       setSearching(false)
@@ -172,6 +179,17 @@ export default function SearchPage() {
       </div>
 
       {err && <p style={{ color: 'var(--bad)' }} role="alert">{err}</p>}
+
+      {/* ชิปสกิลที่ไม่มีในฐานข้อมูล — แสดงเหนือผลลัพธ์เพราะมันอธิบายว่าทำไมผลถึง
+          ไม่ตรงกับชิปที่เห็นบนจอ · ต้องขึ้นทั้งตอนมีผลและตอนไม่มีผล ตอนไม่มีผล
+          คือตอนที่ผู้ใช้ต้องการคำอธิบายมากที่สุด (ดู lib/search/knownSkills.ts) */}
+      {!err && unusedSkills.length > 0 && (
+        <p className="faint" style={{ fontSize: 13 }}>
+          ไม่มีผู้สมัครคนไหนมีสกิล{' '}
+          <b>{unusedSkills.join(' · ')}</b>{' '}
+          จึงไม่ถูกใช้เป็นตัวกรอง (ยังใช้จัดอันดับอยู่)
+        </p>
+      )}
 
       {res.length > 0 && (
         <div className="section-header">
